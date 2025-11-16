@@ -3,13 +3,19 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="#f2f2f7">
+    android:orientation="vertical">
 
     <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="@color/white" />
+        android:background="?attr/colorPrimary"
+        app:title=""
+        app:navigationIcon="@drawable/ic_arrow_back">
+
+        <include layout="@layout/toolbar_title" />
+
+    </androidx.appcompat.widget.Toolbar>
 
     <ScrollView
         android:layout_width="match_parent"
@@ -31,26 +37,40 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:gravity="center_vertical">
 
-                    <TextView
-                        android:id="@+id/userNameText"
-                        android:layout_width="wrap_content"
+                    <ImageView
+                        android:layout_width="80dp"
+                        android:layout_height="80dp"
+                        android:src="@drawable/ic_person"
+                        android:background="@drawable/profile_icon_background"
+                        android:padding="16dp"
+                        app:tint="@color/white" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Пользователь"
-                        android:textSize="22sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/black" />
+                        android:orientation="vertical"
+                        android:layout_marginStart="16dp">
 
-                    <TextView
-                        android:id="@+id/userEmailText"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="user@example.com"
-                        android:textSize="16sp"
-                        android:textColor="@color/gray" />
+                        <TextView
+                            android:id="@+id/userNameText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Пользователь"
+                            android:textSize="24sp"
+                            android:textStyle="bold" />
 
+                        <TextView
+                            android:id="@+id/userEmailText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="user@example.com"
+                            android:textSize="18sp" />
+
+                    </LinearLayout>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
@@ -59,14 +79,16 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/submit_ad"
-                android:layout_marginBottom="16dp" />
+                android:layout_marginBottom="16dp"
+                style="@style/AutoRuButton" />
 
             <Button
                 android:id="@+id/logoutButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/logout"
-                android:layout_marginTop="32dp" />
+                android:layout_marginTop="32dp"
+                style="@style/AutoRuButton" />
 
         </LinearLayout>
     </ScrollView>

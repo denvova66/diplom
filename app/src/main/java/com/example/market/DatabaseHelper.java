@@ -133,9 +133,43 @@ public class DatabaseHelper {
                 });
     }
 
-    // Интерфейс для колбэков
+    // Новые методы для EditCarActivity
+    public void getCarById(String carId, final CarCallback callback) {
+        db.collection("cars")
+                .document(carId)
+                .get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful() && task.getResult() != null) {
+                        Car car = task.getResult().toObject(Car.class);
+                        if (car != null) {
+                            car.setId(task.getResult().getId());
+                            callback.onCarLoaded(car);
+                        } else {
+                            callback.onError("Car not found");
+                        }
+                    } else {
+                        callback.onError(task.getException() != null ?
+                                task.getException().getMessage() : "Unknown error");
+                    }
+                });
+    }
+
+    public void updateUserCar(Car car, final DatabaseCallback callback) {
+        db.collection("cars")
+                .document(car.getId())
+                .set(car)
+                .addOnSuccessListener(aVoid -> callback.onSuccess())
+                .addOnFailureListener(e -> callback.onError(e.getMessage()));
+    }
+
+    // Интерфейсы для колбэков
     public interface DatabaseCallback {
         void onSuccess();
+        void onError(String errorMessage);
+    }
+
+    public interface CarCallback {
+        void onCarLoaded(Car car);
         void onError(String errorMessage);
     }
 }

@@ -8,9 +8,13 @@ import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
+
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.bumptech.glide.Glide;
+
 import java.util.List;
 
 public class FavoritesAdapter extends RecyclerView.Adapter<FavoritesAdapter.FavoriteViewHolder> {
@@ -62,11 +66,24 @@ public class FavoritesAdapter extends RecyclerView.Adapter<FavoritesAdapter.Favo
             mileageText.setText(car.getMileage() + " км");
             priceText.setText(String.format("%.0f руб.", car.getPrice()));
 
+            // Загружаем изображение
             if (car.getImageUrl() != null && !car.getImageUrl().isEmpty()) {
-                Glide.with(context)
-                        .load(car.getImageUrl())
-                        .placeholder(R.drawable.ic_car_placeholder)
-                        .into(carImage);
+                if (car.getImageUrl().startsWith("local://")) {
+                    String imageName = car.getImageUrl().replace("local://", "");
+                    int resourceId = context.getResources().getIdentifier(imageName, "drawable", context.getPackageName());
+                    if (resourceId != 0) {
+                        carImage.setImageResource(resourceId);
+                    } else {
+                        carImage.setImageResource(R.drawable.ic_car_placeholder);
+                    }
+                } else {
+                    Glide.with(context)
+                            .load(car.getImageUrl())
+                            .placeholder(R.drawable.ic_car_placeholder)
+                            .into(carImage);
+                }
+            } else {
+                carImage.setImageResource(R.drawable.ic_car_placeholder);
             }
 
             favoriteButton.setImageResource(R.drawable.ic_favorite_filled);
@@ -79,6 +96,9 @@ public class FavoritesAdapter extends RecyclerView.Adapter<FavoritesAdapter.Favo
                     carList.remove(position);
                     notifyItemRemoved(position);
                     notifyItemRangeChanged(position, carList.size());
+
+                    // Показываем сообщение
+                    Toast.makeText(context, "Удалено из избранного", Toast.LENGTH_SHORT).show();
                 }
             });
 
@@ -87,8 +107,8 @@ public class FavoritesAdapter extends RecyclerView.Adapter<FavoritesAdapter.Favo
                 if (position != RecyclerView.NO_POSITION) {
                     Car clickedCar = carList.get(position);
                     Intent intent = new Intent(context, CarDetailActivity.class);
-                    intent.putExtra("car_id", clickedCar.getId());
-                    context.startActivity(intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                    intent.putExtra("car", clickedCar);
+                    context.startActivity(intent);
                 }
             });
         }

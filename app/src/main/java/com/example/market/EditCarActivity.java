@@ -1,32 +1,38 @@
 package com.example.market;
 
-import android.app.ProgressDialog;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 
 import com.bumptech.glide.Glide;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
+import java.util.Collections;
+
 public class EditCarActivity extends AppCompatActivity {
     private EditText brandEditText, modelEditText, yearEditText, mileageEditText,
             engineEditText, priceEditText, descriptionEditText;
     private Button addImageButton, submitButton;
     private ImageView carImageView;
+    private ProgressBar progressBar;
     private Uri imageUri;
     private String carId;
     private Car currentCar;
     private FirebaseFirestore db;
     private FirebaseStorage storage;
+    private DatabaseHelper databaseHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,7 +41,11 @@ public class EditCarActivity extends AppCompatActivity {
 
         db = FirebaseFirestore.getInstance();
         storage = FirebaseStorage.getInstance();
+        databaseHelper = new DatabaseHelper(this);
         carId = getIntent().getStringExtra("car_id");
+
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        toolbar.setNavigationOnClickListener(v -> onBackPressed());
 
         initViews();
         loadCarDetails();
@@ -52,6 +62,7 @@ public class EditCarActivity extends AppCompatActivity {
         addImageButton = findViewById(R.id.addImageButton);
         submitButton = findViewById(R.id.submitButton);
         carImageView = findViewById(R.id.carImageView);
+        progressBar = findViewById(R.id.progressBar);
 
         addImageButton.setOnClickListener(v -> selectImage());
         submitButton.setOnClickListener(v -> saveChanges());
@@ -74,15 +85,23 @@ public class EditCarActivity extends AppCompatActivity {
     }
 
     private void loadCarDetails() {
-        db.collection("cars").document(carId).get()
-                .addOnSuccessListener(documentSnapshot -> {
-                    if (documentSnapshot.exists()) {
-                        currentCar = documentSnapshot.toObject(Car.class);
-                        if (currentCar != null) {
-                            displayCarDetails();
-                        }
-                    }
-                });
+        progressBar.setVisibility(View.VISIBLE);
+        databaseHelper.getCarById(carId, new DatabaseHelper.CarCallback() {
+            @Override
+            public void onCarLoaded(Car car) {
+                progressBar.setVisibility(View.GONE);
+                currentCar = car;
+                if (currentCar != null) {
+                    displayCarDetails();
+                }
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                progressBar.setVisibility(View.GONE);
+                Toast.makeText(EditCarActivity.this, "Ошибка загрузки данных: " + errorMessage, Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void displayCarDetails() {
@@ -94,6 +113,7 @@ public class EditCarActivity extends AppCompatActivity {
         priceEditText.setText(String.valueOf(currentCar.getPrice()));
         descriptionEditText.setText(currentCar.getDescription());
 
+        // Используем getImageUrl(), который вернет первое изображение из списка
         if (currentCar.getImageUrl() != null) {
             Glide.with(this).load(currentCar.getImageUrl()).into(carImageView);
         }
@@ -114,25 +134,27 @@ public class EditCarActivity extends AppCompatActivity {
             return;
         }
 
-        currentCar.setBrand(brand);
-        currentCar.setModel(model);
-        currentCar.setYear(Integer.parseInt(yearStr));
-        currentCar.setMileage(Integer.parseInt(mileageStr));
-        currentCar.setEngineVolume(Double.parseDouble(engineStr));
-        currentCar.setPrice(Double.parseDouble(priceStr));
-        currentCar.setDescription(description);
+        try {
+            currentCar.setBrand(brand);
+            currentCar.setModel(model);
+            currentCar.setYear(Integer.parseInt(yearStr));
+            currentCar.setMileage(Integer.parseInt(mileageStr));
+            currentCar.setEngineVolume(Double.parseDouble(engineStr));
+            currentCar.setPrice(Double.parseDouble(priceStr));
+            currentCar.setDescription(description);
 
-        if (imageUri != null) {
-            uploadImageAndUpdateCar();
-        } else {
-            updateCarInFirestore();
+            if (imageUri != null) {
+                uploadImageAndUpdateCar();
+            } else {
+                updateCarInFirestore();
+            }
+        } catch (NumberFormatException e) {
+            Toast.makeText(this, "Проверьте корректность введенных числовых данных", Toast.LENGTH_SHORT).show();
         }
     }
 
     private void uploadImageAndUpdateCar() {
-        final ProgressDialog progressDialog = new ProgressDialog(this); // Добавлено final
-        progressDialog.setMessage("Обновление данных...");
-        progressDialog.show();
+        progressBar.setVisibility(View.VISIBLE);
 
         StorageReference imageRef = storage.getReference().child("car_images/" +
                 System.currentTimeMillis() + ".jpg");
@@ -140,33 +162,32 @@ public class EditCarActivity extends AppCompatActivity {
         imageRef.putFile(imageUri)
                 .addOnSuccessListener(taskSnapshot -> {
                     imageRef.getDownloadUrl().addOnSuccessListener(uri -> {
+                        // setImageUrl() обновит/установит первое изображение
                         currentCar.setImageUrl(uri.toString());
-                        updateCarInFirestore(progressDialog);
+                        updateCarInFirestore();
                     });
                 })
                 .addOnFailureListener(e -> {
-                    progressDialog.dismiss();
+                    progressBar.setVisibility(View.GONE);
                     Toast.makeText(this, "Ошибка загрузки фото", Toast.LENGTH_SHORT).show();
                 });
     }
 
     private void updateCarInFirestore() {
-        final ProgressDialog progressDialog = new ProgressDialog(this); // Добавлено final
-        progressDialog.setMessage("Обновление данных...");
-        progressDialog.show();
-        updateCarInFirestore(progressDialog);
-    }
+        progressBar.setVisibility(View.VISIBLE);
+        databaseHelper.updateUserCar(currentCar, new DatabaseHelper.DatabaseCallback() {
+            @Override
+            public void onSuccess() {
+                progressBar.setVisibility(View.GONE);
+                Toast.makeText(EditCarActivity.this, "Изменения сохранены", Toast.LENGTH_SHORT).show();
+                finish();
+            }
 
-    private void updateCarInFirestore(final ProgressDialog progressDialog) { // Добавлен параметр
-        db.collection("cars").document(carId).set(currentCar)
-                .addOnSuccessListener(aVoid -> {
-                    progressDialog.dismiss();
-                    Toast.makeText(this, "Изменения сохранены", Toast.LENGTH_SHORT).show();
-                    finish();
-                })
-                .addOnFailureListener(e -> {
-                    progressDialog.dismiss();
-                    Toast.makeText(this, "Ошибка сохранения", Toast.LENGTH_SHORT).show();
-                });
+            @Override
+            public void onError(String errorMessage) {
+                progressBar.setVisibility(View.GONE);
+                Toast.makeText(EditCarActivity.this, "Ошибка сохранения: " + errorMessage, Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 }

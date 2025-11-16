@@ -1,43 +1,62 @@
 package com.example.market;
 
 import android.os.Bundle;
-import android.view.View; // <--- ДОБАВЛЕН ЭТОТ ИМПОРТ
+import android.view.View;
+import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class FavoritesActivity extends AppCompatActivity {
     private RecyclerView favoritesRecyclerView;
     private FavoritesAdapter favoritesAdapter;
     private List<Car> favoriteCars;
+    private TextView emptyText;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_favorites);
 
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        toolbar.setNavigationOnClickListener(v -> onBackPressed());
+
         initViews();
-        loadFavorites();
+        setupRecyclerView();
     }
 
     private void initViews() {
         favoritesRecyclerView = findViewById(R.id.favoritesRecyclerView);
+        emptyText = findViewById(R.id.emptyText);
         favoritesRecyclerView.setLayoutManager(new LinearLayoutManager(this));
     }
 
-    private void loadFavorites() {
-        favoriteCars = Favorites.getFavoriteCars();
+    private void setupRecyclerView() {
+        // Use a copy of the list to avoid ConcurrentModificationException
+        favoriteCars = new ArrayList<>(Favorites.getFavoriteCars());
         favoritesAdapter = new FavoritesAdapter(favoriteCars, this);
         favoritesRecyclerView.setAdapter(favoritesAdapter);
 
+        updateFavoritesList();
+    }
+
+    private void updateFavoritesList() {
+        // Refresh the list from the source of truth
+        favoriteCars.clear();
+        favoriteCars.addAll(Favorites.getFavoriteCars());
+        favoritesAdapter.notifyDataSetChanged();
+
+        // Update the visibility of the empty message
         if (favoriteCars.isEmpty()) {
-            findViewById(R.id.emptyText).setVisibility(View.VISIBLE);
+            emptyText.setVisibility(View.VISIBLE);
             favoritesRecyclerView.setVisibility(View.GONE);
         } else {
-            findViewById(R.id.emptyText).setVisibility(View.GONE);
+            emptyText.setVisibility(View.GONE);
             favoritesRecyclerView.setVisibility(View.VISIBLE);
         }
     }
@@ -45,8 +64,7 @@ public class FavoritesActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (favoritesAdapter != null) {
-            favoritesAdapter.notifyDataSetChanged();
-        }
+        // Always update the list when the activity is resumed
+        updateFavoritesList();
     }
 }

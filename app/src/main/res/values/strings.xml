@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Маркет</string>
+    <string name="app_name">BuyCar</string>
     <string name="profile">Профиль</string>
     <string name="add_car">Добавить автомобиль</string>
     <string name="logout">Выйти</string>
@@ -16,6 +16,7 @@
     <string name="price">Цена (руб)</string>
     <string name="description">Описание</string>
     <string name="submit_ad">Разместить объявление</string>
+    <string name="search_hint">Поиск по марке или модели...</string>
     <string-array name="languages">
         <item>Русский</item>
         <item>English</item>

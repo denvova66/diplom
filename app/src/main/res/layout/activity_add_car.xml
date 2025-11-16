@@ -1,14 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp"
-    android:background="#f2f2f7">
+    android:padding="16dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical">
+
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="?attr/colorPrimary"
+            app:title=""
+            app:navigationIcon="@drawable/ic_arrow_back">
+
+            <include layout="@layout/toolbar_title" />
+
+        </androidx.appcompat.widget.Toolbar>
 
         <ImageView
             android:id="@+id/carImageView"
@@ -23,21 +35,24 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Добавить фото"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="16dp"
+            style="@style/AutoRuButton" />
 
         <EditText
             android:id="@+id/brandEditText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Марка"
-            android:layout_marginBottom="8dp" />
+            android:layout_marginBottom="8dp"
+            style="@style/AutoRuEditText" />
 
         <EditText
             android:id="@+id/modelEditText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Модель"
-            android:layout_marginBottom="8dp" />
+            android:layout_marginBottom="8dp"
+            style="@style/AutoRuEditText" />
 
         <EditText
             android:id="@+id/yearEditText"
@@ -45,7 +60,8 @@
             android:layout_height="wrap_content"
             android:hint="Год"
             android:inputType="number"
-            android:layout_marginBottom="8dp" />
+            android:layout_marginBottom="8dp"
+            style="@style/AutoRuEditText" />
 
         <EditText
             android:id="@+id/mileageEditText"
@@ -53,7 +69,8 @@
             android:layout_height="wrap_content"
             android:hint="Пробег (км)"
             android:inputType="number"
-            android:layout_marginBottom="8dp" />
+            android:layout_marginBottom="8dp"
+            style="@style/AutoRuEditText" />
 
         <EditText
             android:id="@+id/engineEditText"
@@ -61,7 +78,8 @@
             android:layout_height="wrap_content"
             android:hint="Объем двигателя (л)"
             android:inputType="numberDecimal"
-            android:layout_marginBottom="8dp" />
+            android:layout_marginBottom="8dp"
+            style="@style/AutoRuEditText" />
 
         <EditText
             android:id="@+id/priceEditText"
@@ -69,7 +87,8 @@
             android:layout_height="wrap_content"
             android:hint="Цена (руб)"
             android:inputType="numberDecimal"
-            android:layout_marginBottom="8dp" />
+            android:layout_marginBottom="8dp"
+            style="@style/AutoRuEditText" />
 
         <EditText
             android:id="@+id/descriptionEditText"
@@ -78,15 +97,22 @@
             android:hint="Описание автомобиля"
             android:gravity="top"
             android:inputType="textMultiLine"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="16dp"
+            style="@style/AutoRuEditText" />
 
         <Button
             android:id="@+id/submitButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Разместить объявление"
-            android:backgroundTint="#007AFF"
-            android:textColor="#FFFFFF" />
+            style="@style/AutoRuButton" />
+
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:visibility="gone" />
 
     </LinearLayout>
 </ScrollView>

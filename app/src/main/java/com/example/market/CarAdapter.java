@@ -8,6 +8,7 @@ import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -44,6 +45,11 @@ public class CarAdapter extends RecyclerView.Adapter<CarAdapter.CarViewHolder> {
         return carList.size();
     }
 
+    public void updateList(List<Car> newList) {
+        carList = newList;
+        notifyDataSetChanged();
+    }
+
     class CarViewHolder extends RecyclerView.ViewHolder {
         private ImageView carImage;
         private TextView brandModelText, yearText, mileageText, priceText;
@@ -78,20 +84,29 @@ public class CarAdapter extends RecyclerView.Adapter<CarAdapter.CarViewHolder> {
             // Загружаем изображение
             loadCarImage(car);
 
-            favoriteButton.setImageResource(car.isFavorite() ?
-                    R.drawable.ic_favorite_filled : R.drawable.ic_favorite);
+            updateFavoriteButton(car);
 
             favoriteButton.setOnClickListener(v -> {
-                if (car.isFavorite()) {
-                    Favorites.removeFavoriteCar(car);
-                    car.setFavorite(false);
-                    favoriteButton.setImageResource(R.drawable.ic_favorite);
-                } else {
-                    Favorites.addFavoriteCar(car);
-                    car.setFavorite(true);
-                    favoriteButton.setImageResource(R.drawable.ic_favorite_filled);
-                }
+                toggleFavorite(car);
+                updateFavoriteButton(car);
             });
+        }
+
+        private void toggleFavorite(Car car) {
+            if (car.isFavorite()) {
+                Favorites.removeFavoriteCar(car);
+                car.setFavorite(false);
+                Toast.makeText(context, "Удалено из избранного", Toast.LENGTH_SHORT).show();
+            } else {
+                Favorites.addFavoriteCar(car);
+                car.setFavorite(true);
+                Toast.makeText(context, "Добавлено в избранное", Toast.LENGTH_SHORT).show();
+            }
+        }
+
+        private void updateFavoriteButton(Car car) {
+            favoriteButton.setImageResource(car.isFavorite() ?
+                    R.drawable.ic_favorite_filled : R.drawable.ic_favorite);
         }
 
         private void loadCarImage(Car car) {

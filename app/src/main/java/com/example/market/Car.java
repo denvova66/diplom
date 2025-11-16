@@ -1,7 +1,10 @@
 package com.example.market;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 
 public class Car implements Serializable {
     private String id;
@@ -13,12 +16,14 @@ public class Car implements Serializable {
     private double price;
     private String description;
     private String ownerId;
-    private String imageUrl;
+    private List<String> imageUrls; // Изменено на список
     private Date createdAt;
     private boolean isFavorite;
 
     // Обязательно нужен пустой конструктор для Firebase
-    public Car() {}
+    public Car() {
+        this.imageUrls = new ArrayList<>();
+    }
 
     public Car(String id, String brand, String model, int year, int mileage,
                double engineVolume, double price, String description,
@@ -32,11 +37,12 @@ public class Car implements Serializable {
         this.price = price;
         this.description = description;
         this.ownerId = ownerId;
-        this.imageUrl = imageUrl;
+        // Сохраняем как список с одним элементом
+        this.imageUrls = new ArrayList<>(Collections.singletonList(imageUrl));
         this.createdAt = new Date();
     }
 
-    // Геттеры и сеттеры для всех полей
+    // Геттеры и сеттеры
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 
@@ -64,8 +70,33 @@ public class Car implements Serializable {
     public String getOwnerId() { return ownerId; }
     public void setOwnerId(String ownerId) { this.ownerId = ownerId; }
 
-    public String getImageUrl() { return imageUrl; }
-    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+    // --- Новые и обновленные методы для изображений ---
+    public List<String> getImageUrls() {
+        return imageUrls;
+    }
+
+    public void setImageUrls(List<String> imageUrls) {
+        this.imageUrls = imageUrls;
+    }
+
+    // Для обратной совместимости
+    public String getImageUrl() {
+        if (imageUrls != null && !imageUrls.isEmpty()) {
+            return imageUrls.get(0);
+        }
+        return null;
+    }
+
+    // Для обратной совместимости
+    public void setImageUrl(String imageUrl) {
+        if (this.imageUrls == null) {
+            this.imageUrls = new ArrayList<>();
+        } else {
+            this.imageUrls.clear();
+        }
+        this.imageUrls.add(imageUrl);
+    }
+    // --- Конец изменений ---
 
     public Date getCreatedAt() { return createdAt; }
     public void setCreatedAt(Date createdAt) { this.createdAt = createdAt; }
