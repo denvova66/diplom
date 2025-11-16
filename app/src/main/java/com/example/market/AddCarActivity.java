@@ -11,24 +11,18 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.storage.FirebaseStorage;
-import com.google.firebase.storage.StorageReference;
-import com.google.firebase.storage.UploadTask;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 
 public class AddCarActivity extends AppCompatActivity {
@@ -41,8 +35,6 @@ public class AddCarActivity extends AppCompatActivity {
     private ProgressBar progressBar;
     private Uri imageUri;
     private FirebaseAuth mAuth;
-    private FirebaseStorage storage;
-    private FirebaseFirestore db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,8 +42,7 @@ public class AddCarActivity extends AppCompatActivity {
         setContentView(R.layout.activity_add_car);
 
         mAuth = FirebaseAuth.getInstance();
-        storage = FirebaseStorage.getInstance();
-        db = FirebaseFirestore.getInstance();
+        LocalCarManager.init(this);
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> onBackPressed());
@@ -102,7 +93,6 @@ public class AddCarActivity extends AppCompatActivity {
         String priceStr = priceEditText.getText().toString().trim();
         String description = descriptionEditText.getText().toString().trim();
 
-        // Валидация полей
         if (brand.isEmpty()) {
             Toast.makeText(this, "Введите марку автомобиля", Toast.LENGTH_SHORT).show();
             brandEditText.requestFocus();
@@ -150,7 +140,6 @@ public class AddCarActivity extends AppCompatActivity {
             double engineVolume = Double.parseDouble(engineStr);
             double price = Double.parseDouble(priceStr);
 
-            // Дополнительная валидация
             if (year < 1900 || year > 2030) {
                 Toast.makeText(this, "Введите корректный год (1900-2030)", Toast.LENGTH_SHORT).show();
                 return;
@@ -171,7 +160,7 @@ public class AddCarActivity extends AppCompatActivity {
                 return;
             }
 
-            uploadImageAndSaveCar(brand, model, year, mileage, engineVolume, price, description);
+            saveCarLocally(brand, model, year, mileage, engineVolume, price, description);
 
         } catch (NumberFormatException e) {
             Toast.makeText(this, "Проверьте корректность введенных числовых данных", Toast.LENGTH_SHORT).show();
@@ -179,9 +168,9 @@ public class AddCarActivity extends AppCompatActivity {
         }
     }
 
-    private void uploadImageAndSaveCar(String brand, String model, int year,
-                                       int mileage, double engineVolume,
-                                       double price, String description) {
+    private void saveCarLocally(String brand, String model, int year,
+                                int mileage, double engineVolume,
+                                double price, String description) {
         progressBar.setVisibility(View.VISIBLE);
         submitButton.setEnabled(false);
 
@@ -193,112 +182,76 @@ public class AddCarActivity extends AppCompatActivity {
             return;
         }
 
-        // Создаем уникальное имя файла
-        String fileName = "car_images/" + UUID.randomUUID().toString() + ".jpg";
-        StorageReference imageRef = storage.getReference().child(fileName);
+        // Сохраняем изображение локально
+        String localImagePath = saveImageToLocalStorage(imageUri);
 
-        Log.d(TAG, "Начинаем загрузку изображения: " + fileName);
+        if (localImagePath == null) {
+            // Если не удалось сохранить изображение, используем placeholder
+            localImagePath = "local://ic_car_placeholder";
+        }
 
-        // Загружаем изображение в Storage
-        UploadTask uploadTask = imageRef.putFile(imageUri);
+        // Создаем объект Car
+        Car car = new Car();
+        car.setId(UUID.randomUUID().toString());
+        car.setBrand(brand);
+        car.setModel(model);
+        car.setYear(year);
+        car.setMileage(mileage);
+        car.setEngineVolume(engineVolume);
+        car.setPrice(price);
+        car.setDescription(description);
+        car.setOwnerId(user.getUid());
+        car.setImageUrls(Collections.singletonList(localImagePath));
+        car.setCreatedAt(new Date());
+        car.setFavorite(false);
+        car.setLocal(true);
 
-        uploadTask.addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
-            @Override
-            public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                Log.d(TAG, "Изображение успешно загружено");
+        // Сохраняем в локальное хранилище
+        LocalCarManager.addCar(car);
 
-                // Получаем URL загруженного изображения
-                imageRef.getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
-                    @Override
-                    public void onSuccess(Uri uri) {
-                        String imageUrl = uri.toString();
-                        Log.d(TAG, "Получен URL изображения: " + imageUrl);
+        Log.d(TAG, "Автомобиль успешно сохранен локально: " + car.getId());
+        progressBar.setVisibility(View.GONE);
+        submitButton.setEnabled(true);
 
-                        // Сохраняем данные в Firestore
-                        saveCarToFirestore(brand, model, year, mileage, engineVolume,
-                                price, description, imageUrl, user.getUid());
-                    }
-                }).addOnFailureListener(new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull Exception e) {
-                        Log.e(TAG, "Ошибка получения URL изображения", e);
-                        progressBar.setVisibility(View.GONE);
-                        submitButton.setEnabled(true);
-                        Toast.makeText(AddCarActivity.this,
-                                "Ошибка получения ссылки на фото: " + e.getMessage(),
-                                Toast.LENGTH_LONG).show();
-                    }
-                });
-            }
-        }).addOnFailureListener(new OnFailureListener() {
-            @Override
-            public void onFailure(@NonNull Exception e) {
-                Log.e(TAG, "Ошибка загрузки изображения", e);
-                progressBar.setVisibility(View.GONE);
-                submitButton.setEnabled(true);
-                Toast.makeText(AddCarActivity.this,
-                        "Ошибка загрузки фото: " + e.getMessage(),
-                        Toast.LENGTH_LONG).show();
-            }
-        });
+        Toast.makeText(this, "Автомобиль успешно добавлен!", Toast.LENGTH_SHORT).show();
+
+        // Переходим на главную страницу
+        Intent intent = new Intent(AddCarActivity.this, MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
+        finish();
     }
 
-    private void saveCarToFirestore(String brand, String model, int year,
-                                    int mileage, double engineVolume, double price,
-                                    String description, String imageUrl, String ownerId) {
+    private String saveImageToLocalStorage(Uri imageUri) {
+        try {
+            InputStream inputStream = getContentResolver().openInputStream(imageUri);
+            if (inputStream == null) return null;
 
-        // Создаем уникальный ID для автомобиля
-        String carId = db.collection("cars").document().getId();
+            // Создаем папку для изображений
+            File imagesDir = new File(getFilesDir(), "car_images");
+            if (!imagesDir.exists()) {
+                imagesDir.mkdirs();
+            }
 
-        // Создаем данные автомобиля
-        Map<String, Object> carData = new HashMap<>();
-        carData.put("id", carId);
-        carData.put("brand", brand);
-        carData.put("model", model);
-        carData.put("year", year);
-        carData.put("mileage", mileage);
-        carData.put("engineVolume", engineVolume);
-        carData.put("price", price);
-        carData.put("description", description);
-        carData.put("ownerId", ownerId);
-        carData.put("imageUrls", Collections.singletonList(imageUrl));
-        carData.put("createdAt", new Date());
-        carData.put("favorite", false);
+            // Создаем файл с уникальным именем
+            String fileName = "car_" + System.currentTimeMillis() + ".jpg";
+            File imageFile = new File(imagesDir, fileName);
 
-        Log.d(TAG, "Сохраняем автомобиль в Firestore: " + carId);
+            FileOutputStream outputStream = new FileOutputStream(imageFile);
+            byte[] buffer = new byte[1024];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                outputStream.write(buffer, 0, bytesRead);
+            }
 
-        // Сохраняем в Firestore
-        db.collection("cars")
-                .document(carId)
-                .set(carData)
-                .addOnSuccessListener(new OnSuccessListener<Void>() {
-                    @Override
-                    public void onSuccess(Void aVoid) {
-                        Log.d(TAG, "Автомобиль успешно сохранен в Firestore");
-                        progressBar.setVisibility(View.GONE);
-                        submitButton.setEnabled(true);
+            inputStream.close();
+            outputStream.close();
 
-                        Toast.makeText(AddCarActivity.this,
-                                "Автомобиль успешно добавлен!",
-                                Toast.LENGTH_SHORT).show();
+            return "file://" + imageFile.getAbsolutePath();
 
-                        // Переходим на главную страницу
-                        Intent intent = new Intent(AddCarActivity.this, MainActivity.class);
-                        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
-                        startActivity(intent);
-                        finish();
-                    }
-                })
-                .addOnFailureListener(new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull Exception e) {
-                        Log.e(TAG, "Ошибка сохранения автомобиля в Firestore", e);
-                        progressBar.setVisibility(View.GONE);
-                        submitButton.setEnabled(true);
-                        Toast.makeText(AddCarActivity.this,
-                                "Ошибка сохранения автомобиля: " + e.getMessage(),
-                                Toast.LENGTH_LONG).show();
-                    }
-                });
+        } catch (Exception e) {
+            Log.e(TAG, "Ошибка сохранения изображения", e);
+            return null;
+        }
     }
 }

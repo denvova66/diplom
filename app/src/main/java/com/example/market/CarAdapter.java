@@ -2,6 +2,8 @@ package com.example.market;
 
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,6 +17,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 
+import java.io.File;
 import java.util.List;
 
 public class CarAdapter extends RecyclerView.Adapter<CarAdapter.CarViewHolder> {
@@ -111,15 +114,32 @@ public class CarAdapter extends RecyclerView.Adapter<CarAdapter.CarViewHolder> {
 
         private void loadCarImage(Car car) {
             if (car.getImageUrl() != null && !car.getImageUrl().isEmpty()) {
-                if (car.getImageUrl().startsWith("local://")) {
-                    // Локальное изображение из drawable
+                if (car.getImageUrl().startsWith("file://")) {
+                    // Локальное изображение из файловой системы
+                    loadFromFile(car.getImageUrl());
+                } else if (car.getImageUrl().startsWith("local://")) {
+                    // Локальное изображение из drawable (старая реализация)
                     loadFromLocal(car.getImageUrl());
                 } else {
-                    // URL изображение (для обратной совместимости)
+                    // URL изображение (Firebase Storage)
                     loadFromUrl(car.getImageUrl());
                 }
             } else {
                 // Если нет изображения, показываем placeholder
+                carImage.setImageResource(R.drawable.ic_car_placeholder);
+            }
+        }
+
+        private void loadFromFile(String imagePath) {
+            try {
+                File imageFile = new File(imagePath.replace("file://", ""));
+                if (imageFile.exists()) {
+                    Bitmap bitmap = BitmapFactory.decodeFile(imageFile.getAbsolutePath());
+                    carImage.setImageBitmap(bitmap);
+                } else {
+                    carImage.setImageResource(R.drawable.ic_car_placeholder);
+                }
+            } catch (Exception e) {
                 carImage.setImageResource(R.drawable.ic_car_placeholder);
             }
         }

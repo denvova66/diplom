@@ -15,7 +15,6 @@ public class App extends Application {
         super.onCreate();
         context = this;
 
-        // Инициализация Firebase
         try {
             FirebaseApp.initializeApp(this);
             Log.d(TAG, "Firebase initialized successfully");
@@ -23,15 +22,16 @@ public class App extends Application {
             Log.e(TAG, "Firebase initialization failed", e);
         }
 
-        // Инициализация избранного с обработкой ошибок
         try {
             Favorites.init(this);
             Log.d(TAG, "Favorites initialized successfully");
         } catch (Exception e) {
             Log.e(TAG, "Favorites initialization failed", e);
-            // Если произошла ошибка, очищаем кеш
             Favorites.clearCache();
         }
+
+        LocalCarManager.init(this);
+        Log.d(TAG, "LocalCarManager initialized successfully");
     }
 
     public static Context getContext() {

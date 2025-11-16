@@ -18,13 +18,14 @@ public class Car implements Serializable {
     private List<String> imageUrls;
     private Date createdAt;
     private boolean isFavorite;
+    private boolean isLocal;
 
     public Car() {
         this.imageUrls = new ArrayList<>();
         this.createdAt = new Date();
+        this.isLocal = false;
     }
 
-    // Геттеры и сеттеры
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 
@@ -59,7 +60,6 @@ public class Car implements Serializable {
         return (imageUrls != null && !imageUrls.isEmpty()) ? imageUrls.get(0) : null;
     }
 
-    // Метод для обратной совместимости
     public void setImageUrl(String imageUrl) {
         if (this.imageUrls == null) {
             this.imageUrls = new ArrayList<>();
@@ -74,6 +74,9 @@ public class Car implements Serializable {
 
     public boolean isFavorite() { return isFavorite; }
     public void setFavorite(boolean favorite) { isFavorite = favorite; }
+
+    public boolean isLocal() { return isLocal; }
+    public void setLocal(boolean local) { isLocal = local; }
 
     @Override
     public boolean equals(Object o) {

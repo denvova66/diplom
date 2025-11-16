@@ -39,12 +39,13 @@ public class MainActivity extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
 
-        // Проверка аутентификации
         if (mAuth.getCurrentUser() == null) {
             startActivity(new Intent(this, LoginActivity.class));
             finish();
             return;
         }
+
+        LocalCarManager.init(this);
 
         carList = new ArrayList<>();
         filteredCarList = new ArrayList<>();
@@ -52,7 +53,6 @@ public class MainActivity extends AppCompatActivity {
         setupBottomNavigation();
         setupSearch();
 
-        // Загружаем машины из Firebase
         loadCars();
     }
 
@@ -97,10 +97,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         carAdapter.notifyDataSetChanged();
-
-        if (!searchText.isEmpty() && filteredCarList.isEmpty()) {
-            Toast.makeText(this, "По запросу \"" + searchText + "\" ничего не найдено", Toast.LENGTH_SHORT).show();
-        }
     }
 
     private void setupBottomNavigation() {
@@ -123,20 +119,24 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loadCars() {
+        // Сначала загружаем локальные автомобили
+        List<Car> localCars = LocalCarManager.loadCars();
+        carList.clear();
+        carList.addAll(localCars);
+
+        // Затем загружаем из Firebase
         db.collection("cars")
                 .orderBy("createdAt", Query.Direction.DESCENDING)
                 .get()
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
-                        carList.clear();
                         for (DocumentSnapshot doc : task.getResult()) {
                             Car car = documentToCar(doc);
-                            if (car != null) {
+                            if (car != null && !containsCar(carList, car)) {
                                 carList.add(car);
                             }
                         }
 
-                        // Синхронизируем избранное
                         Favorites.syncWithLoadedCars(carList);
 
                         filteredCarList.clear();
@@ -145,13 +145,23 @@ public class MainActivity extends AppCompatActivity {
 
                         if (carList.isEmpty()) {
                             Toast.makeText(MainActivity.this, "Нет объявлений о продаже автомобилей", Toast.LENGTH_SHORT).show();
-                        } else {
-                            Toast.makeText(MainActivity.this, "Загружено " + carList.size() + " автомобилей", Toast.LENGTH_SHORT).show();
                         }
                     } else {
-                        Toast.makeText(this, "Ошибка загрузки данных", Toast.LENGTH_SHORT).show();
+                        // Если ошибка Firebase, показываем только локальные
+                        filteredCarList.clear();
+                        filteredCarList.addAll(carList);
+                        carAdapter.notifyDataSetChanged();
                     }
                 });
+    }
+
+    private boolean containsCar(List<Car> cars, Car targetCar) {
+        for (Car car : cars) {
+            if (car.getId().equals(targetCar.getId())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private Car documentToCar(DocumentSnapshot doc) {
@@ -198,7 +208,6 @@ public class MainActivity extends AppCompatActivity {
                 car.setCreatedAt(createdAt);
             }
 
-            // Проверяем избранное
             car.setFavorite(Favorites.isFavorite(car));
 
             return car;
