@@ -2,6 +2,7 @@ package com.example.market;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -13,6 +14,7 @@ public class Favorites {
     private static final String FAVORITES_KEY = "favorite_cars";
     private static List<Car> favoriteCars = new ArrayList<>();
     private static SharedPreferences prefs;
+    private static final String TAG = "Favorites";
 
     public static void init(Context context) {
         if (prefs == null) {
@@ -29,6 +31,7 @@ public class Favorites {
         if (!containsCar(car)) {
             favoriteCars.add(car);
             saveFavorites();
+            Log.d(TAG, "Car added to favorites: " + car.getId());
         }
     }
 
@@ -37,6 +40,7 @@ public class Favorites {
         if (carToRemove != null) {
             favoriteCars.remove(carToRemove);
             saveFavorites();
+            Log.d(TAG, "Car removed from favorites: " + car.getId());
         }
     }
 
@@ -49,6 +53,8 @@ public class Favorites {
     }
 
     private static Car findCarById(String id) {
+        if (id == null) return null;
+
         for (Car car : favoriteCars) {
             if (car.getId() != null && car.getId().equals(id)) {
                 return car;
@@ -65,14 +71,13 @@ public class Favorites {
             }
         }
         prefs.edit().putStringSet(FAVORITES_KEY, favoriteIds).apply();
+        Log.d(TAG, "Favorites saved: " + favoriteIds.size() + " cars");
     }
 
     private static void loadFavorites() {
         try {
-            // Получаем Set из SharedPreferences
             Set<String> favoriteIds = prefs.getStringSet(FAVORITES_KEY, new HashSet<>());
 
-            // Если это не Set, а String (старая версия), конвертируем
             if (favoriteIds == null) {
                 favoriteIds = new HashSet<>();
             }
@@ -83,22 +88,20 @@ public class Favorites {
                 car.setId(id);
                 favoriteCars.add(car);
             }
+            Log.d(TAG, "Favorites loaded: " + favoriteCars.size() + " cars");
         } catch (Exception e) {
-            // Если произошла ошибка (например, старые данные), очищаем
-            e.printStackTrace();
+            Log.e(TAG, "Error loading favorites", e);
             prefs.edit().remove(FAVORITES_KEY).apply();
             favoriteCars.clear();
         }
     }
 
-    // Метод для синхронизации с загруженными автомобилями
     public static void syncWithLoadedCars(List<Car> loadedCars) {
         Set<String> favoriteIds = new HashSet<>();
         try {
             favoriteIds = prefs.getStringSet(FAVORITES_KEY, new HashSet<>());
         } catch (Exception e) {
-            e.printStackTrace();
-            // Если ошибка, очищаем настройки
+            Log.e(TAG, "Error getting favorite IDs", e);
             prefs.edit().remove(FAVORITES_KEY).apply();
         }
 
@@ -110,11 +113,14 @@ public class Favorites {
                 favoriteCars.add(car);
             }
         }
+        Log.d(TAG, "Favorites synced: " + favoriteCars.size() + " cars");
     }
 
-    // Метод для очистки кеша (на случай проблем)
     public static void clearCache() {
         favoriteCars.clear();
-        prefs.edit().clear().apply();
+        if (prefs != null) {
+            prefs.edit().clear().apply();
+        }
+        Log.d(TAG, "Favorites cache cleared");
     }
 }

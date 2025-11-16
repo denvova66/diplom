@@ -4,8 +4,10 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ProgressBar;
+import android.widget.Switch;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -22,6 +24,7 @@ import java.util.Map;
 public class RegisterActivity extends AppCompatActivity {
     private EditText emailEditText, passwordEditText, confirmPasswordEditText;
     private Button registerButton;
+    private Switch musicToggle;
     private ProgressBar progressBar;
     private FirebaseAuth mAuth;
 
@@ -32,10 +35,9 @@ public class RegisterActivity extends AppCompatActivity {
 
         mAuth = FirebaseAuth.getInstance();
 
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        toolbar.setNavigationOnClickListener(v -> onBackPressed());
-
         initViews();
+        setupToolbar();
+        setupMusicToggle();
     }
 
     private void initViews() {
@@ -43,9 +45,34 @@ public class RegisterActivity extends AppCompatActivity {
         passwordEditText = findViewById(R.id.passwordEditText);
         confirmPasswordEditText = findViewById(R.id.confirmPasswordEditText);
         registerButton = findViewById(R.id.registerButton);
+        musicToggle = findViewById(R.id.musicToggle);
         progressBar = findViewById(R.id.progressBar);
 
         registerButton.setOnClickListener(v -> registerUser());
+    }
+
+    private void setupToolbar() {
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        if (toolbar != null) {
+            toolbar.setNavigationOnClickListener(v -> onBackPressed());
+        }
+    }
+
+    private void setupMusicToggle() {
+        musicToggle.setChecked(MusicManager.isMusicPlaying());
+
+        musicToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked) {
+                    MusicManager.playMusic(RegisterActivity.this);
+                    Toast.makeText(RegisterActivity.this, "Swag музыка включена! 🎵", Toast.LENGTH_SHORT).show();
+                } else {
+                    MusicManager.stopMusic();
+                    Toast.makeText(RegisterActivity.this, "Swag музыка выключена", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
     }
 
     private void registerUser() {
@@ -69,17 +96,24 @@ public class RegisterActivity extends AppCompatActivity {
         }
 
         progressBar.setVisibility(View.VISIBLE);
+        registerButton.setEnabled(false);
 
         mAuth.createUserWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, task -> {
                     progressBar.setVisibility(View.GONE);
+                    registerButton.setEnabled(true);
+
                     if (task.isSuccessful()) {
                         saveUserToFirestore(email);
+                        Toast.makeText(RegisterActivity.this, "Регистрация успешна!", Toast.LENGTH_SHORT).show();
                         startActivity(new Intent(this, MainActivity.class));
                         finish();
                     } else {
-                        Toast.makeText(this, "Ошибка регистрации: " +
-                                (task.getException() != null ? task.getException().getMessage() : "Неизвестная ошибка"), Toast.LENGTH_SHORT).show();
+                        String errorMessage = "Ошибка регистрации";
+                        if (task.getException() != null) {
+                            errorMessage += ": " + task.getException().getMessage();
+                        }
+                        Toast.makeText(RegisterActivity.this, errorMessage, Toast.LENGTH_LONG).show();
                     }
                 });
     }
@@ -90,10 +124,26 @@ public class RegisterActivity extends AppCompatActivity {
             Map<String, Object> userData = new HashMap<>();
             userData.put("email", email);
             userData.put("createdAt", new Date());
+            userData.put("displayName", "");
+            userData.put("phoneNumber", "");
 
             FirebaseFirestore.getInstance().collection("users")
                     .document(user.getUid())
-                    .set(userData);
+                    .set(userData)
+                    .addOnSuccessListener(aVoid -> {
+                        // Успешно сохранено в Firestore
+                    })
+                    .addOnFailureListener(e -> {
+                        // Ошибка сохранения в Firestore, но пользователь уже создан в Auth
+                    });
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (musicToggle != null) {
+            musicToggle.setChecked(MusicManager.isMusicPlaying());
         }
     }
 }

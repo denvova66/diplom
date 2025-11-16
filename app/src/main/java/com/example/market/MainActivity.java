@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.widget.EditText;
 import android.widget.Toast;
 
@@ -22,6 +23,8 @@ import java.util.Date;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
+    private static final String TAG = "MainActivity";
+
     private RecyclerView carsRecyclerView;
     private CarAdapter carAdapter;
     private List<Car> carList;
@@ -59,7 +62,10 @@ public class MainActivity extends AppCompatActivity {
     private void initViews() {
         carsRecyclerView = findViewById(R.id.carsRecyclerView);
         searchEditText = findViewById(R.id.searchEditText);
-        carsRecyclerView.setLayoutManager(new GridLayoutManager(this, 2));
+
+        GridLayoutManager layoutManager = new GridLayoutManager(this, 2);
+        carsRecyclerView.setLayoutManager(layoutManager);
+
         carAdapter = new CarAdapter(filteredCarList, this);
         carsRecyclerView.setAdapter(carAdapter);
 
@@ -116,20 +122,20 @@ public class MainActivity extends AppCompatActivity {
             }
             return false;
         });
+
+        bottomNavigationView.setSelectedItemId(R.id.nav_home);
     }
 
     private void loadCars() {
-        // Сначала загружаем локальные автомобили
         List<Car> localCars = LocalCarManager.loadCars();
         carList.clear();
         carList.addAll(localCars);
 
-        // Затем загружаем из Firebase
         db.collection("cars")
                 .orderBy("createdAt", Query.Direction.DESCENDING)
                 .get()
                 .addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
+                    if (task.isSuccessful() && task.getResult() != null) {
                         for (DocumentSnapshot doc : task.getResult()) {
                             Car car = documentToCar(doc);
                             if (car != null && !containsCar(carList, car)) {
@@ -147,17 +153,22 @@ public class MainActivity extends AppCompatActivity {
                             Toast.makeText(MainActivity.this, "Нет объявлений о продаже автомобилей", Toast.LENGTH_SHORT).show();
                         }
                     } else {
-                        // Если ошибка Firebase, показываем только локальные
                         filteredCarList.clear();
                         filteredCarList.addAll(carList);
                         carAdapter.notifyDataSetChanged();
+
+                        if (task.getException() != null) {
+                            Log.e(TAG, "Error loading cars: " + task.getException().getMessage());
+                        }
                     }
                 });
     }
 
     private boolean containsCar(List<Car> cars, Car targetCar) {
+        if (targetCar == null || targetCar.getId() == null) return false;
+
         for (Car car : cars) {
-            if (car.getId().equals(targetCar.getId())) {
+            if (car.getId() != null && car.getId().equals(targetCar.getId())) {
                 return true;
             }
         }
@@ -176,6 +187,12 @@ public class MainActivity extends AppCompatActivity {
                 car.setYear(((Long) yearObj).intValue());
             } else if (yearObj instanceof Integer) {
                 car.setYear((Integer) yearObj);
+            } else if (yearObj instanceof String) {
+                try {
+                    car.setYear(Integer.parseInt((String) yearObj));
+                } catch (NumberFormatException e) {
+                    car.setYear(0);
+                }
             }
 
             Object mileageObj = doc.get("mileage");
@@ -183,16 +200,36 @@ public class MainActivity extends AppCompatActivity {
                 car.setMileage(((Long) mileageObj).intValue());
             } else if (mileageObj instanceof Integer) {
                 car.setMileage((Integer) mileageObj);
+            } else if (mileageObj instanceof String) {
+                try {
+                    car.setMileage(Integer.parseInt((String) mileageObj));
+                } catch (NumberFormatException e) {
+                    car.setMileage(0);
+                }
             }
 
             Object engineObj = doc.get("engineVolume");
             if (engineObj instanceof Double) {
                 car.setEngineVolume((Double) engineObj);
+            } else if (engineObj instanceof String) {
+                try {
+                    car.setEngineVolume(Double.parseDouble((String) engineObj));
+                } catch (NumberFormatException e) {
+                    car.setEngineVolume(0.0);
+                }
             }
 
             Object priceObj = doc.get("price");
             if (priceObj instanceof Double) {
                 car.setPrice((Double) priceObj);
+            } else if (priceObj instanceof Long) {
+                car.setPrice(((Long) priceObj).doubleValue());
+            } else if (priceObj instanceof String) {
+                try {
+                    car.setPrice(Double.parseDouble((String) priceObj));
+                } catch (NumberFormatException e) {
+                    car.setPrice(0.0);
+                }
             }
 
             car.setDescription(doc.getString("description"));
@@ -212,7 +249,7 @@ public class MainActivity extends AppCompatActivity {
 
             return car;
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.e(TAG, "Error converting document to car", e);
             return null;
         }
     }
@@ -221,6 +258,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         loadCars();
-        bottomNavigationView.setSelectedItemId(R.id.nav_home);
+        if (bottomNavigationView != null) {
+            bottomNavigationView.setSelectedItemId(R.id.nav_home);
+        }
     }
 }

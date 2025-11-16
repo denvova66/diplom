@@ -8,6 +8,8 @@
     android:gravity="center"
     android:background="@color/white">
 
+    <!-- Добавляем Toolbar -->
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -15,6 +17,7 @@
         android:textSize="24sp"
         android:textStyle="bold"
         android:textColor="@color/red"
+        android:layout_marginTop="20dp"
         android:layout_marginBottom="40dp" />
 
     <EditText
@@ -47,7 +50,7 @@
         android:id="@+id/loginButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
+        android:layout_marginBottom="8dp"
         android:text="Войти"
         style="@style/AutoRuButton" />
 
@@ -55,7 +58,37 @@
         android:id="@+id/registerButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
         android:text="Зарегистрироваться"
         style="@style/AutoRuButton" />
+
+    <!-- Переключатель Swag музыки -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="8dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Swag"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@color/black" />
+
+        <Switch
+            android:id="@+id/musicToggle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:showText="true"
+            android:textOff="OFF"
+            android:textOn="ON"
+            android:thumb="@drawable/music_toggle_thumb"
+            android:track="@drawable/button_background" />
+
+    </LinearLayout>
 
 </LinearLayout>

@@ -31,10 +31,18 @@ public class App extends Application {
         }
 
         LocalCarManager.init(this);
+        MusicManager.init(this);
         Log.d(TAG, "LocalCarManager initialized successfully");
+        Log.d(TAG, "MusicManager initialized successfully");
     }
 
     public static Context getContext() {
         return context;
+    }
+
+    @Override
+    public void onTerminate() {
+        super.onTerminate();
+        MusicManager.release();
     }
 }
