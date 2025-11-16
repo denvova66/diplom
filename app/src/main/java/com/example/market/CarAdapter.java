@@ -16,6 +16,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.google.firebase.auth.FirebaseAuth;
 
 import java.io.File;
 import java.util.List;
@@ -23,10 +24,12 @@ import java.util.List;
 public class CarAdapter extends RecyclerView.Adapter<CarAdapter.CarViewHolder> {
     private List<Car> carList;
     private Context context;
+    private FirebaseAuth mAuth;
 
     public CarAdapter(List<Car> carList, Context context) {
         this.carList = carList;
         this.context = context;
+        this.mAuth = FirebaseAuth.getInstance();
     }
 
     @NonNull
@@ -57,6 +60,7 @@ public class CarAdapter extends RecyclerView.Adapter<CarAdapter.CarViewHolder> {
         private ImageView carImage;
         private TextView brandModelText, yearText, mileageText, priceText;
         private ImageButton favoriteButton;
+        private ImageView ownerIndicator;
 
         public CarViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -66,6 +70,7 @@ public class CarAdapter extends RecyclerView.Adapter<CarAdapter.CarViewHolder> {
             mileageText = itemView.findViewById(R.id.mileageText);
             priceText = itemView.findViewById(R.id.priceText);
             favoriteButton = itemView.findViewById(R.id.favoriteButton);
+            ownerIndicator = itemView.findViewById(R.id.ownerIndicator);
 
             itemView.setOnClickListener(v -> {
                 int position = getAdapterPosition();
@@ -89,6 +94,9 @@ public class CarAdapter extends RecyclerView.Adapter<CarAdapter.CarViewHolder> {
 
             updateFavoriteButton(car);
 
+            // Показываем индикатор владельца
+            showOwnerIndicator(car);
+
             favoriteButton.setOnClickListener(v -> {
                 toggleFavorite(car);
                 updateFavoriteButton(car);
@@ -110,6 +118,15 @@ public class CarAdapter extends RecyclerView.Adapter<CarAdapter.CarViewHolder> {
         private void updateFavoriteButton(Car car) {
             favoriteButton.setImageResource(car.isFavorite() ?
                     R.drawable.ic_favorite_filled : R.drawable.ic_favorite);
+        }
+
+        private void showOwnerIndicator(Car car) {
+            String currentUserId = mAuth.getCurrentUser() != null ? mAuth.getCurrentUser().getUid() : "";
+            if (car.getOwnerId() != null && car.getOwnerId().equals(currentUserId)) {
+                ownerIndicator.setVisibility(View.VISIBLE);
+            } else {
+                ownerIndicator.setVisibility(View.GONE);
+            }
         }
 
         private void loadCarImage(Car car) {

@@ -144,6 +144,17 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Добавить в избранное"
+                android:layout_marginBottom="8dp"
+                style="@style/AutoRuButton" />
+
+            <!-- Новая кнопка удаления -->
+            <Button
+                android:id="@+id/deleteButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Удалить объявление"
+                android:backgroundTint="@color/red"
+                android:visibility="gone"
                 style="@style/AutoRuButton" />
 
         </LinearLayout>

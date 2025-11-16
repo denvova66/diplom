@@ -30,9 +30,10 @@ import java.util.Map;
 public class CarDetailActivity extends AppCompatActivity {
     private RecyclerView carImagesRecyclerView;
     private TextView brandModelText, yearText, mileageText, engineText, priceText, descriptionText;
-    private Button contactButton, favoriteButton;
+    private Button contactButton, favoriteButton, deleteButton;
     private Car currentCar;
     private FirebaseFirestore db;
+    private FirebaseAuth mAuth;
 
     // Карта номеров телефонов для каждого автомобиля
     private Map<String, String> phoneNumbers = new HashMap<>();
@@ -43,15 +44,17 @@ public class CarDetailActivity extends AppCompatActivity {
         setContentView(R.layout.activity_car_detail);
 
         db = FirebaseFirestore.getInstance();
-
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        toolbar.setNavigationOnClickListener(v -> onBackPressed());
+        mAuth = FirebaseAuth.getInstance();
+        LocalCarManager.init(this);
 
         // Получаем объект Car из Intent
         currentCar = (Car) getIntent().getSerializableExtra("car");
 
         // Инициализируем номера телефонов
         initializePhoneNumbers();
+
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        toolbar.setNavigationOnClickListener(v -> onBackPressed());
 
         initViews();
         displayCarDetails();
@@ -81,12 +84,14 @@ public class CarDetailActivity extends AppCompatActivity {
         descriptionText = findViewById(R.id.descriptionText);
         contactButton = findViewById(R.id.contactButton);
         favoriteButton = findViewById(R.id.favoriteButton);
+        deleteButton = findViewById(R.id.deleteButton);
 
         contactButton.setOnClickListener(v -> callSeller());
         favoriteButton.setOnClickListener(v -> {
             toggleFavorite();
             updateFavoriteButton();
         });
+        deleteButton.setOnClickListener(v -> deleteCar());
     }
 
     private void displayCarDetails() {
@@ -111,7 +116,7 @@ public class CarDetailActivity extends AppCompatActivity {
             updateFavoriteButton();
 
             // Проверяем владельца автомобиля
-            FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+            FirebaseUser currentUser = mAuth.getCurrentUser();
             if (currentUser != null && currentUser.getUid().equals(currentCar.getOwnerId())) {
                 Button editButton = findViewById(R.id.editButton);
                 editButton.setVisibility(View.VISIBLE);
@@ -120,6 +125,11 @@ public class CarDetailActivity extends AppCompatActivity {
                     intent.putExtra("car_id", currentCar.getId());
                     startActivity(intent);
                 });
+
+                // Показываем кнопку удаления для владельца
+                deleteButton.setVisibility(View.VISIBLE);
+            } else {
+                deleteButton.setVisibility(View.GONE);
             }
         }
     }
@@ -149,6 +159,43 @@ public class CarDetailActivity extends AppCompatActivity {
             currentCar.setFavorite(true);
             Toast.makeText(this, "Добавлено в избранное", Toast.LENGTH_SHORT).show();
         }
+        updateFavoriteButton();
+    }
+
+    private void deleteCar() {
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser == null || !currentUser.getUid().equals(currentCar.getOwnerId())) {
+            Toast.makeText(this, "Вы не можете удалить это объявление", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (currentCar.isLocal()) {
+            // Удаляем локальное объявление
+            LocalCarManager.removeCar(currentCar.getId());
+            Toast.makeText(this, "Объявление удалено", Toast.LENGTH_SHORT).show();
+
+            // Возвращаемся на главную страницу
+            Intent intent = new Intent(this, MainActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            startActivity(intent);
+            finish();
+        } else {
+            // Удаляем из Firebase
+            db.collection("cars").document(currentCar.getId())
+                    .delete()
+                    .addOnSuccessListener(aVoid -> {
+                        Toast.makeText(this, "Объявление удалено", Toast.LENGTH_SHORT).show();
+
+                        // Возвращаемся на главную страницу
+                        Intent intent = new Intent(this, MainActivity.class);
+                        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                        startActivity(intent);
+                        finish();
+                    })
+                    .addOnFailureListener(e -> {
+                        Toast.makeText(this, "Ошибка при удалении: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    });
+        }
     }
 
     // Внутренний класс адаптера для изображений
@@ -176,6 +223,20 @@ public class CarDetailActivity extends AppCompatActivity {
                 if (resourceId != 0) {
                     holder.imageView.setImageResource(resourceId);
                 } else {
+                    holder.imageView.setImageResource(R.drawable.ic_car_placeholder);
+                }
+            } else if (imageUrl.startsWith("file://")) {
+                // Локальное изображение из файла
+                try {
+                    String filePath = imageUrl.replace("file://", "");
+                    java.io.File imageFile = new java.io.File(filePath);
+                    if (imageFile.exists()) {
+                        android.graphics.Bitmap bitmap = android.graphics.BitmapFactory.decodeFile(imageFile.getAbsolutePath());
+                        holder.imageView.setImageBitmap(bitmap);
+                    } else {
+                        holder.imageView.setImageResource(R.drawable.ic_car_placeholder);
+                    }
+                } catch (Exception e) {
                     holder.imageView.setImageResource(R.drawable.ic_car_placeholder);
                 }
             } else {

@@ -148,4 +148,16 @@ public class LocalCarManager {
         }
         return null;
     }
+
+    // Получаем автомобили текущего пользователя
+    public static List<Car> getMyCars(String userId) {
+        List<Car> allCars = loadCars();
+        List<Car> myCars = new ArrayList<>();
+        for (Car car : allCars) {
+            if (car.getOwnerId() != null && car.getOwnerId().equals(userId)) {
+                myCars.add(car);
+            }
+        }
+        return myCars;
+    }
 }
