@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">BuyCar</string>
+    <string name="app_name">SwagBuyCar</string>
     <string name="profile">Профиль</string>
     <string name="add_car">Добавить автомобиль</string>
     <string name="logout">Выйти</string>
