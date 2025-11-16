@@ -79,7 +79,7 @@ public class RegisterActivity extends AppCompatActivity {
                         finish();
                     } else {
                         Toast.makeText(this, "Ошибка регистрации: " +
-                                task.getException().getMessage(), Toast.LENGTH_SHORT).show();
+                                (task.getException() != null ? task.getException().getMessage() : "Неизвестная ошибка"), Toast.LENGTH_SHORT).show();
                     }
                 });
     }

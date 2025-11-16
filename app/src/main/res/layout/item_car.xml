@@ -19,20 +19,6 @@
             android:scaleType="centerCrop"
             android:src="@drawable/ic_car_placeholder" />
 
-        <!-- Индикатор владельца -->
-        <ImageView
-            android:id="@+id/ownerIndicator"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_alignParentTop="true"
-            android:layout_alignParentStart="true"
-            android:layout_margin="8dp"
-            android:src="@drawable/ic_person"
-            android:background="@drawable/profile_icon_background"
-            android:padding="4dp"
-            android:visibility="gone"
-            android:contentDescription="Your ad" />
-
         <ImageButton
             android:id="@+id/favoriteButton"
             android:layout_width="48dp"

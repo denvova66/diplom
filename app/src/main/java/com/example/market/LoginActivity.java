@@ -6,6 +6,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -66,7 +67,7 @@ public class LoginActivity extends AppCompatActivity {
                         finish();
                     } else {
                         Toast.makeText(this, "Ошибка входа: " +
-                                task.getException().getMessage(), Toast.LENGTH_SHORT).show();
+                                (task.getException() != null ? task.getException().getMessage() : "Неизвестная ошибка"), Toast.LENGTH_SHORT).show();
                     }
                 });
     }

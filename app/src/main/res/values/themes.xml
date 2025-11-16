@@ -7,6 +7,7 @@
         <item name="colorOnPrimary">@color/white</item>
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
         <item name="android:textColor">@color/black</item>
+        <item name="android:windowBackground">@drawable/app_background_drawable</item>
     </style>
 
     <style name="Theme.Market" parent="Base.Theme.Market" />
@@ -33,5 +34,23 @@
         <item name="android:textSize">16sp</item>
         <item name="android:textColor">@color/black</item>
         <item name="android:textColorHint">@color/gray</item>
+    </style>
+
+    <!-- Стиль для Bottom Navigation -->
+    <style name="BottomNavigationStyle" parent="Widget.MaterialComponents.BottomNavigationView">
+        <item name="android:background">@drawable/bottom_navigation_background</item>
+        <item name="itemIconTint">@drawable/bottom_navigation_item_color</item>
+        <item name="itemTextColor">@drawable/bottom_navigation_item_color</item>
+        <item name="itemTextAppearanceActive">@style/BottomNavigationTextActive</item>
+        <item name="itemTextAppearanceInactive">@style/BottomNavigationTextInactive</item>
+    </style>
+
+    <style name="BottomNavigationTextActive">
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="BottomNavigationTextInactive">
+        <item name="android:textSize">11sp</item>
     </style>
 </resources>
