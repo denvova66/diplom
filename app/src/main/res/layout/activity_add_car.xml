@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="16dp"
-    android:background="@drawable/app_background_drawable">
+    android:background="@color/white">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -23,49 +23,99 @@
 
         </androidx.appcompat.widget.Toolbar>
 
-        <!-- Карточка для формы -->
-        <androidx.cardview.widget.CardView
+        <ImageView
+            android:id="@+id/carImageView"
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:scaleType="centerCrop"
+            android:background="#E0E0E0"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Кнопка добавления фото -->
+        <Button
+            android:id="@+id/addImageButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="4dp"
-            android:layout_margin="8dp"
-            app:cardBackgroundColor="@color/white">
+            android:text="Добавить фото"
+            android:layout_marginBottom="16dp"
+            style="@style/AutoRuButton" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
+        <EditText
+            android:id="@+id/brandEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Марка"
+            android:layout_marginBottom="8dp"
+            style="@style/AutoRuEditText" />
 
-                <ImageView
-                    android:id="@+id/carImageView"
-                    android:layout_width="match_parent"
-                    android:layout_height="200dp"
-                    android:scaleType="centerCrop"
-                    android:background="#E0E0E0"
-                    android:layout_marginBottom="16dp" />
+        <EditText
+            android:id="@+id/modelEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Модель"
+            android:layout_marginBottom="8dp"
+            style="@style/AutoRuEditText" />
 
-                <Button
-                    android:id="@+id/addImageButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Добавить фото"
-                    android:layout_marginBottom="16dp"
-                    style="@style/AutoRuButton" />
+        <EditText
+            android:id="@+id/yearEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Год"
+            android:inputType="number"
+            android:layout_marginBottom="8dp"
+            style="@style/AutoRuEditText" />
 
-                <EditText
-                    android:id="@+id/brandEditText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="Марка"
-                    android:layout_marginBottom="8dp"
-                    style="@style/AutoRuEditText" />
+        <EditText
+            android:id="@+id/mileageEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Пробег (км)"
+            android:inputType="number"
+            android:layout_marginBottom="8dp"
+            style="@style/AutoRuEditText" />
 
-                <!-- Остальные поля -->
+        <EditText
+            android:id="@+id/engineEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Объем двигателя (л)"
+            android:inputType="numberDecimal"
+            android:layout_marginBottom="8dp"
+            style="@style/AutoRuEditText" />
 
-            </LinearLayout>
-        </androidx.cardview.widget.CardView>
+        <EditText
+            android:id="@+id/priceEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Цена (руб)"
+            android:inputType="numberDecimal"
+            android:layout_marginBottom="8dp"
+            style="@style/AutoRuEditText" />
+
+        <EditText
+            android:id="@+id/descriptionEditText"
+            android:layout_width="match_parent"
+            android:layout_height="120dp"
+            android:hint="Описание автомобиля"
+            android:gravity="top"
+            android:inputType="textMultiLine"
+            android:layout_marginBottom="16dp"
+            style="@style/AutoRuEditText" />
+
+        <!-- Кнопка отправки -->
+        <Button
+            android:id="@+id/submitButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Разместить объявление"
+            style="@style/AutoRuButton" />
+
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:visibility="gone" />
 
     </LinearLayout>
 </ScrollView>

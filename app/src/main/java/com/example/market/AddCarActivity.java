@@ -45,12 +45,15 @@ public class AddCarActivity extends AppCompatActivity {
         LocalCarManager.init(this);
 
         Toolbar toolbar = findViewById(R.id.toolbar);
-        toolbar.setNavigationOnClickListener(v -> onBackPressed());
+        if (toolbar != null) {
+            toolbar.setNavigationOnClickListener(v -> onBackPressed());
+        }
 
         initViews();
     }
 
     private void initViews() {
+        // Находим все View элементы
         brandEditText = findViewById(R.id.brandEditText);
         modelEditText = findViewById(R.id.modelEditText);
         yearEditText = findViewById(R.id.yearEditText);
@@ -63,6 +66,20 @@ public class AddCarActivity extends AppCompatActivity {
         carImageView = findViewById(R.id.carImageView);
         progressBar = findViewById(R.id.progressBar);
 
+        // Проверяем что кнопки найдены
+        if (addImageButton == null) {
+            Log.e(TAG, "addImageButton not found!");
+            Toast.makeText(this, "Ошибка: кнопка добавления фото не найдена", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (submitButton == null) {
+            Log.e(TAG, "submitButton not found!");
+            Toast.makeText(this, "Ошибка: кнопка отправки не найдена", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Устанавливаем обработчики кликов
         addImageButton.setOnClickListener(v -> selectImage());
         submitButton.setOnClickListener(v -> addCar());
     }
