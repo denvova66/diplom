@@ -1,6 +1,7 @@
 package com.example.market;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -15,12 +16,18 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class CarDetailActivity extends AppCompatActivity {
     private ImageView carImage;
     private TextView brandModelText, yearText, mileageText, engineText, priceText, descriptionText;
     private Button contactButton, favoriteButton;
     private Car currentCar;
     private FirebaseFirestore db;
+
+    // Карта номеров телефонов для каждого автомобиля
+    private Map<String, String> phoneNumbers = new HashMap<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,8 +39,28 @@ public class CarDetailActivity extends AppCompatActivity {
         // Получаем объект Car из Intent
         currentCar = (Car) getIntent().getSerializableExtra("car");
 
+        // Инициализируем номера телефонов
+        initializePhoneNumbers();
+
         initViews();
         displayCarDetails();
+    }
+
+    private void initializePhoneNumbers() {
+        // 10 уникальных номеров для автомобилей
+        phoneNumbers.put("car_1", "+7 (993) 563-49-69");
+        phoneNumbers.put("car_2", "+7 (901) 234-56-78");
+        phoneNumbers.put("car_3", "+7 (902) 345-67-89");
+        phoneNumbers.put("car_4", "+7 (903) 456-78-90");
+        phoneNumbers.put("car_5", "+7 (904) 567-89-01");
+        phoneNumbers.put("car_6", "+7 (905) 678-90-12");
+        phoneNumbers.put("car_7", "+7 (906) 789-01-23");
+        phoneNumbers.put("car_8", "+7 (907) 890-12-34");
+        phoneNumbers.put("car_9", "+7 (908) 901-23-45");
+        phoneNumbers.put("car_10", "+7 (909) 012-34-56");
+
+        // Для пользовательских автомобилей
+        phoneNumbers.put("default", "+7 (999) 000-00-00");
     }
 
     private void initViews() {
@@ -47,7 +74,7 @@ public class CarDetailActivity extends AppCompatActivity {
         contactButton = findViewById(R.id.contactButton);
         favoriteButton = findViewById(R.id.favoriteButton);
 
-        contactButton.setOnClickListener(v -> contactSeller());
+        contactButton.setOnClickListener(v -> callSeller());
         favoriteButton.setOnClickListener(v -> toggleFavorite());
     }
 
@@ -59,6 +86,10 @@ public class CarDetailActivity extends AppCompatActivity {
             engineText.setText("Объем: " + currentCar.getEngineVolume() + " л");
             priceText.setText(String.format("%.0f руб.", currentCar.getPrice()));
             descriptionText.setText(currentCar.getDescription());
+
+            // Устанавливаем номер телефона на кнопку
+            String phoneNumber = phoneNumbers.getOrDefault(currentCar.getId(), phoneNumbers.get("default"));
+            contactButton.setText("Позвонить: " + phoneNumber);
 
             // Загружаем изображение если есть URL
             if (currentCar.getImageUrl() != null && !currentCar.getImageUrl().isEmpty()) {
@@ -98,8 +129,21 @@ public class CarDetailActivity extends AppCompatActivity {
         }
     }
 
-    private void contactSeller() {
-        Toast.makeText(this, "Контакты продавца будут здесь", Toast.LENGTH_SHORT).show();
+    private void callSeller() {
+        if (currentCar != null) {
+            String phoneNumber = phoneNumbers.getOrDefault(currentCar.getId(), phoneNumbers.get("default"));
+
+            // Создаем интент для звонка
+            Intent intent = new Intent(Intent.ACTION_DIAL);
+            intent.setData(Uri.parse("tel:" + phoneNumber));
+
+            // Проверяем есть ли приложение для звонков
+            if (intent.resolveActivity(getPackageManager()) != null) {
+                startActivity(intent);
+            } else {
+                Toast.makeText(this, "Приложение для звонков не найдено", Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 
     private void toggleFavorite() {

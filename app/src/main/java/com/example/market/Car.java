@@ -17,6 +17,7 @@ public class Car implements Serializable {
     private Date createdAt;
     private boolean isFavorite;
 
+    // Обязательно нужен пустой конструктор для Firebase
     public Car() {}
 
     public Car(String id, String brand, String model, int year, int mileage,

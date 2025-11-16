@@ -1,7 +1,5 @@
 package com.example.market;
 
-
-
 import android.app.ProgressDialog;
 import android.content.Intent;
 import android.net.Uri;
@@ -28,6 +26,7 @@ public class AddCarActivity extends AppCompatActivity {
     private Uri imageUri;
     private FirebaseAuth mAuth;
     private FirebaseStorage storage;
+    private DatabaseHelper databaseHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,6 +35,7 @@ public class AddCarActivity extends AppCompatActivity {
 
         mAuth = FirebaseAuth.getInstance();
         storage = FirebaseStorage.getInstance();
+        databaseHelper = new DatabaseHelper(this);
         initViews();
     }
 
@@ -123,23 +123,37 @@ public class AddCarActivity extends AppCompatActivity {
                                     int mileage, double engineVolume, double price,
                                     String description, String imageUrl, ProgressDialog progressDialog) {
         FirebaseUser user = mAuth.getCurrentUser();
-        if (user == null) return;
+        if (user == null) {
+            progressDialog.dismiss();
+            return;
+        }
 
-        String carId = FirebaseFirestore.getInstance().collection("cars").document().getId();
-        Car car = new Car(carId, brand, model, year, mileage, engineVolume,
-                price, description, user.getUid(), imageUrl);
+        // Создаем объект Car
+        Car car = new Car();
+        car.setBrand(brand);
+        car.setModel(model);
+        car.setYear(year);
+        car.setMileage(mileage);
+        car.setEngineVolume(engineVolume);
+        car.setPrice(price);
+        car.setDescription(description);
+        car.setOwnerId(user.getUid());
+        car.setImageUrl(imageUrl);
 
-        FirebaseFirestore.getInstance().collection("cars")
-                .document(carId)
-                .set(car)
-                .addOnSuccessListener(aVoid -> {
-                    progressDialog.dismiss();
-                    Toast.makeText(this, "Автомобиль добавлен", Toast.LENGTH_SHORT).show();
-                    finish();
-                })
-                .addOnFailureListener(e -> {
-                    progressDialog.dismiss();
-                    Toast.makeText(this, "Ошибка добавления", Toast.LENGTH_SHORT).show();
-                });
+        // Используем DatabaseHelper для сохранения
+        databaseHelper.addUserCar(car, new DatabaseHelper.DatabaseCallback() {
+            @Override
+            public void onSuccess() {
+                progressDialog.dismiss();
+                Toast.makeText(AddCarActivity.this, "Автомобиль добавлен!", Toast.LENGTH_SHORT).show();
+                finish();
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                progressDialog.dismiss();
+                Toast.makeText(AddCarActivity.this, "Ошибка добавления: " + errorMessage, Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 }

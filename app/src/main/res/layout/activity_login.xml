@@ -7,15 +7,6 @@
     android:background="#f2f2f7"
     android:gravity="center">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="32dp"
-        android:text="Войдите или зарегистрируйтесь"
-        android:textColor="#000000"
-        android:textSize="24sp"
-        android:textStyle="bold" />
-
     <EditText
         android:id="@+id/emailEditText"
         android:layout_width="match_parent"

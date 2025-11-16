@@ -63,7 +63,6 @@ public class CarAdapter extends RecyclerView.Adapter<CarAdapter.CarViewHolder> {
                 if (position != RecyclerView.NO_POSITION) {
                     Car car = carList.get(position);
                     Intent intent = new Intent(context, CarDetailActivity.class);
-                    // Передаем весь объект Car через Intent
                     intent.putExtra("car", car);
                     context.startActivity(intent);
                 }
@@ -76,16 +75,8 @@ public class CarAdapter extends RecyclerView.Adapter<CarAdapter.CarViewHolder> {
             mileageText.setText(car.getMileage() + " км");
             priceText.setText(String.format("%.0f руб.", car.getPrice()));
 
-            // Загружаем изображение если есть URL
-            if (car.getImageUrl() != null && !car.getImageUrl().isEmpty()) {
-                Glide.with(context)
-                        .load(car.getImageUrl())
-                        .placeholder(R.drawable.ic_car_placeholder)
-                        .into(carImage);
-            } else {
-                // Если нет изображения, показываем placeholder
-                carImage.setImageResource(R.drawable.ic_car_placeholder);
-            }
+            // Загружаем изображение
+            loadCarImage(car);
 
             favoriteButton.setImageResource(car.isFavorite() ?
                     R.drawable.ic_favorite_filled : R.drawable.ic_favorite);
@@ -101,6 +92,48 @@ public class CarAdapter extends RecyclerView.Adapter<CarAdapter.CarViewHolder> {
                     favoriteButton.setImageResource(R.drawable.ic_favorite_filled);
                 }
             });
+        }
+
+        private void loadCarImage(Car car) {
+            if (car.getImageUrl() != null && !car.getImageUrl().isEmpty()) {
+                if (car.getImageUrl().startsWith("local://")) {
+                    // Локальное изображение из drawable
+                    loadFromLocal(car.getImageUrl());
+                } else {
+                    // URL изображение (для обратной совместимости)
+                    loadFromUrl(car.getImageUrl());
+                }
+            } else {
+                // Если нет изображения, показываем placeholder
+                carImage.setImageResource(R.drawable.ic_car_placeholder);
+            }
+        }
+
+        private void loadFromLocal(String imageUrl) {
+            String imageName = imageUrl.replace("local://", "");
+            int resourceId = getResourceId(imageName);
+
+            if (resourceId != 0) {
+                carImage.setImageResource(resourceId);
+            } else {
+                carImage.setImageResource(R.drawable.ic_car_placeholder);
+            }
+        }
+
+        private int getResourceId(String imageName) {
+            return context.getResources().getIdentifier(
+                    imageName,
+                    "drawable",
+                    context.getPackageName()
+            );
+        }
+
+        private void loadFromUrl(String imageUrl) {
+            Glide.with(context)
+                    .load(imageUrl)
+                    .placeholder(R.drawable.ic_car_placeholder)
+                    .error(R.drawable.ic_car_placeholder)
+                    .into(carImage);
         }
     }
 }

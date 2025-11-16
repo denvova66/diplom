@@ -39,7 +39,7 @@
                 android:layout_height="wrap_content"
                 android:text="3 500 000 руб."
                 android:textSize="20sp"
-                android:textColor="#8BC34A"
+                android:textColor="#007AFF"
                 android:textStyle="bold"
                 android:layout_marginBottom="16dp" />
 
@@ -101,7 +101,7 @@
                 android:id="@+id/contactButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Связаться с продавцом"
+                android:text="Позвонить: +7 (900) 123-45-67"
                 android:backgroundTint="#007AFF"
                 android:textColor="#FFFFFF"
                 android:layout_marginBottom="8dp" />
@@ -117,5 +117,4 @@
         </LinearLayout>
 
     </LinearLayout>
-
 </ScrollView>
