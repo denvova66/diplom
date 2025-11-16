@@ -20,10 +20,15 @@ import java.util.List;
 public class FavoritesAdapter extends RecyclerView.Adapter<FavoritesAdapter.FavoriteViewHolder> {
     private List<Car> carList;
     private Context context;
+    private FavoritesActivity favoritesActivity;
 
     public FavoritesAdapter(List<Car> carList, Context context) {
         this.carList = carList;
         this.context = context;
+        // Сохраняем ссылку на активность
+        if (context instanceof FavoritesActivity) {
+            this.favoritesActivity = (FavoritesActivity) context;
+        }
     }
 
     @NonNull
@@ -99,6 +104,11 @@ public class FavoritesAdapter extends RecyclerView.Adapter<FavoritesAdapter.Favo
 
                     // Показываем сообщение
                     Toast.makeText(context, "Удалено из избранного", Toast.LENGTH_SHORT).show();
+
+                    // Обновляем список если пустой через активность
+                    if (favoritesActivity != null && carList.isEmpty()) {
+                        favoritesActivity.updateFavoritesList();
+                    }
                 }
             });
 

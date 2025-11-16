@@ -15,11 +15,18 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
 import com.bumptech.glide.Glide;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class EditCarActivity extends AppCompatActivity {
     private EditText brandEditText, modelEditText, yearEditText, mileageEditText,
@@ -32,7 +39,7 @@ public class EditCarActivity extends AppCompatActivity {
     private Car currentCar;
     private FirebaseFirestore db;
     private FirebaseStorage storage;
-    private DatabaseHelper databaseHelper;
+    private FirebaseAuth mAuth;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,7 +48,7 @@ public class EditCarActivity extends AppCompatActivity {
 
         db = FirebaseFirestore.getInstance();
         storage = FirebaseStorage.getInstance();
-        databaseHelper = new DatabaseHelper(this);
+        mAuth = FirebaseAuth.getInstance();
         carId = getIntent().getStringExtra("car_id");
 
         Toolbar toolbar = findViewById(R.id.toolbar);
@@ -86,22 +93,89 @@ public class EditCarActivity extends AppCompatActivity {
 
     private void loadCarDetails() {
         progressBar.setVisibility(View.VISIBLE);
-        databaseHelper.getCarById(carId, new DatabaseHelper.CarCallback() {
-            @Override
-            public void onCarLoaded(Car car) {
-                progressBar.setVisibility(View.GONE);
-                currentCar = car;
-                if (currentCar != null) {
-                    displayCarDetails();
-                }
+
+        if (carId == null) {
+            Toast.makeText(this, "Ошибка: ID автомобиля не указан", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+
+        db.collection("cars").document(carId)
+                .get()
+                .addOnCompleteListener(task -> {
+                    progressBar.setVisibility(View.GONE);
+                    if (task.isSuccessful() && task.getResult() != null) {
+                        DocumentSnapshot doc = task.getResult();
+                        currentCar = documentToCar(doc);
+                        if (currentCar != null) {
+                            displayCarDetails();
+                        } else {
+                            Toast.makeText(EditCarActivity.this, "Ошибка загрузки данных автомобиля", Toast.LENGTH_SHORT).show();
+                            finish();
+                        }
+                    } else {
+                        Toast.makeText(EditCarActivity.this, "Ошибка загрузки: " +
+                                        (task.getException() != null ? task.getException().getMessage() : "Unknown error"),
+                                Toast.LENGTH_SHORT).show();
+                        finish();
+                    }
+                });
+    }
+
+    private Car documentToCar(DocumentSnapshot doc) {
+        try {
+            Car car = new Car();
+            car.setId(doc.getId());
+            car.setBrand(doc.getString("brand"));
+            car.setModel(doc.getString("model"));
+
+            Object yearObj = doc.get("year");
+            if (yearObj instanceof Long) {
+                car.setYear(((Long) yearObj).intValue());
+            } else if (yearObj instanceof Integer) {
+                car.setYear((Integer) yearObj);
             }
 
-            @Override
-            public void onError(String errorMessage) {
-                progressBar.setVisibility(View.GONE);
-                Toast.makeText(EditCarActivity.this, "Ошибка загрузки данных: " + errorMessage, Toast.LENGTH_SHORT).show();
+            Object mileageObj = doc.get("mileage");
+            if (mileageObj instanceof Long) {
+                car.setMileage(((Long) mileageObj).intValue());
+            } else if (mileageObj instanceof Integer) {
+                car.setMileage((Integer) mileageObj);
             }
-        });
+
+            Object engineObj = doc.get("engineVolume");
+            if (engineObj instanceof Double) {
+                car.setEngineVolume((Double) engineObj);
+            }
+
+            Object priceObj = doc.get("price");
+            if (priceObj instanceof Double) {
+                car.setPrice((Double) priceObj);
+            }
+
+            car.setDescription(doc.getString("description"));
+            car.setOwnerId(doc.getString("ownerId"));
+
+            List<String> imageUrls = (List<String>) doc.get("imageUrls");
+            if (imageUrls != null && !imageUrls.isEmpty()) {
+                car.setImageUrls(imageUrls);
+            }
+
+            Date createdAt = doc.getDate("createdAt");
+            if (createdAt != null) {
+                car.setCreatedAt(createdAt);
+            }
+
+            Boolean favorite = doc.getBoolean("favorite");
+            if (favorite != null) {
+                car.setFavorite(favorite);
+            }
+
+            return car;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     private void displayCarDetails() {
@@ -113,7 +187,6 @@ public class EditCarActivity extends AppCompatActivity {
         priceEditText.setText(String.valueOf(currentCar.getPrice()));
         descriptionEditText.setText(currentCar.getDescription());
 
-        // Используем getImageUrl(), который вернет первое изображение из списка
         if (currentCar.getImageUrl() != null) {
             Glide.with(this).load(currentCar.getImageUrl()).into(carImageView);
         }
@@ -162,8 +235,8 @@ public class EditCarActivity extends AppCompatActivity {
         imageRef.putFile(imageUri)
                 .addOnSuccessListener(taskSnapshot -> {
                     imageRef.getDownloadUrl().addOnSuccessListener(uri -> {
-                        // setImageUrl() обновит/установит первое изображение
-                        currentCar.setImageUrl(uri.toString());
+                        // Используем setImageUrls вместо setImageUrl
+                        currentCar.setImageUrls(Collections.singletonList(uri.toString()));
                         updateCarInFirestore();
                     });
                 })
@@ -175,19 +248,30 @@ public class EditCarActivity extends AppCompatActivity {
 
     private void updateCarInFirestore() {
         progressBar.setVisibility(View.VISIBLE);
-        databaseHelper.updateUserCar(currentCar, new DatabaseHelper.DatabaseCallback() {
-            @Override
-            public void onSuccess() {
-                progressBar.setVisibility(View.GONE);
-                Toast.makeText(EditCarActivity.this, "Изменения сохранены", Toast.LENGTH_SHORT).show();
-                finish();
-            }
 
-            @Override
-            public void onError(String errorMessage) {
-                progressBar.setVisibility(View.GONE);
-                Toast.makeText(EditCarActivity.this, "Ошибка сохранения: " + errorMessage, Toast.LENGTH_SHORT).show();
-            }
-        });
+        Map<String, Object> carData = new HashMap<>();
+        carData.put("brand", currentCar.getBrand());
+        carData.put("model", currentCar.getModel());
+        carData.put("year", currentCar.getYear());
+        carData.put("mileage", currentCar.getMileage());
+        carData.put("engineVolume", currentCar.getEngineVolume());
+        carData.put("price", currentCar.getPrice());
+        carData.put("description", currentCar.getDescription());
+
+        if (currentCar.getImageUrls() != null && !currentCar.getImageUrls().isEmpty()) {
+            carData.put("imageUrls", currentCar.getImageUrls());
+        }
+
+        db.collection("cars").document(carId)
+                .update(carData)
+                .addOnSuccessListener(aVoid -> {
+                    progressBar.setVisibility(View.GONE);
+                    Toast.makeText(EditCarActivity.this, "Изменения сохранены", Toast.LENGTH_SHORT).show();
+                    finish();
+                })
+                .addOnFailureListener(e -> {
+                    progressBar.setVisibility(View.GONE);
+                    Toast.makeText(EditCarActivity.this, "Ошибка сохранения: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
     }
 }

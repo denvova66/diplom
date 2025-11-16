@@ -18,6 +18,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -28,7 +29,7 @@ public class MainActivity extends AppCompatActivity {
     private BottomNavigationView bottomNavigationView;
     private EditText searchEditText;
     private FirebaseAuth mAuth;
-    private DatabaseHelper databaseHelper;
+    private FirebaseFirestore db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,7 +37,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         mAuth = FirebaseAuth.getInstance();
-        databaseHelper = new DatabaseHelper(this);
+        db = FirebaseFirestore.getInstance();
 
         // Проверка аутентификации
         if (mAuth.getCurrentUser() == null) {
@@ -50,9 +51,6 @@ public class MainActivity extends AppCompatActivity {
         initViews();
         setupBottomNavigation();
         setupSearch();
-
-        // Автоматически добавляем тестовые данные при первом запуске
-        databaseHelper.addTestDataIfNeeded();
 
         // Загружаем машины из Firebase
         loadCars();
@@ -87,10 +85,8 @@ public class MainActivity extends AppCompatActivity {
         filteredCarList.clear();
 
         if (searchText.isEmpty()) {
-            // Если поиск пустой, показываем все автомобили
             filteredCarList.addAll(carList);
         } else {
-            // Фильтруем по марке или модели (без учета регистра)
             String query = searchText.toLowerCase().trim();
             for (Car car : carList) {
                 if (car.getBrand().toLowerCase().contains(query) ||
@@ -102,7 +98,6 @@ public class MainActivity extends AppCompatActivity {
 
         carAdapter.notifyDataSetChanged();
 
-        // Показываем сообщение если ничего не найдено
         if (!searchText.isEmpty() && filteredCarList.isEmpty()) {
             Toast.makeText(this, "По запросу \"" + searchText + "\" ничего не найдено", Toast.LENGTH_SHORT).show();
         }
@@ -112,7 +107,6 @@ public class MainActivity extends AppCompatActivity {
         bottomNavigationView.setOnNavigationItemSelectedListener(item -> {
             int itemId = item.getItemId();
             if (itemId == R.id.nav_home) {
-                // Уже на главной
                 return true;
             } else if (itemId == R.id.nav_favorites) {
                 startActivity(new Intent(this, FavoritesActivity.class));
@@ -129,52 +123,94 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loadCars() {
-        try {
-            FirebaseFirestore db = FirebaseFirestore.getInstance();
-
-            // Загружаем из Firebase
-            db.collection("cars")
-                    .orderBy("createdAt", Query.Direction.DESCENDING)
-                    .get()
-                    .addOnCompleteListener(task -> {
-                        if (task.isSuccessful() && task.getResult() != null) {
-                            carList.clear();
-                            for (DocumentSnapshot doc : task.getResult()) {
-                                Car car = doc.toObject(Car.class);
-                                if (car != null) {
-                                    car.setId(doc.getId());
-                                    car.setFavorite(Favorites.isFavorite(car));
-                                    carList.add(car);
-                                }
+        db.collection("cars")
+                .orderBy("createdAt", Query.Direction.DESCENDING)
+                .get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        carList.clear();
+                        for (DocumentSnapshot doc : task.getResult()) {
+                            Car car = documentToCar(doc);
+                            if (car != null) {
+                                carList.add(car);
                             }
-                            // После загрузки обновляем отфильтрованный список
-                            filteredCarList.clear();
-                            filteredCarList.addAll(carList);
-                            carAdapter.notifyDataSetChanged();
-
-                            if (carList.isEmpty()) {
-                                Toast.makeText(MainActivity.this, "Нет объявлений о продаже автомобилей", Toast.LENGTH_SHORT).show();
-                            } else {
-                                Toast.makeText(MainActivity.this, "Загружено " + carList.size() + " автомобилей", Toast.LENGTH_SHORT).show();
-                            }
-                        } else {
-                            Toast.makeText(this, "Ошибка загрузки данных", Toast.LENGTH_SHORT).show();
                         }
-                    })
-                    .addOnFailureListener(e -> {
-                        Toast.makeText(this, "Ошибка загрузки: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                    });
 
+                        // Синхронизируем избранное
+                        Favorites.syncWithLoadedCars(carList);
+
+                        filteredCarList.clear();
+                        filteredCarList.addAll(carList);
+                        carAdapter.notifyDataSetChanged();
+
+                        if (carList.isEmpty()) {
+                            Toast.makeText(MainActivity.this, "Нет объявлений о продаже автомобилей", Toast.LENGTH_SHORT).show();
+                        } else {
+                            Toast.makeText(MainActivity.this, "Загружено " + carList.size() + " автомобилей", Toast.LENGTH_SHORT).show();
+                        }
+                    } else {
+                        Toast.makeText(this, "Ошибка загрузки данных", Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
+
+    private Car documentToCar(DocumentSnapshot doc) {
+        try {
+            Car car = new Car();
+            car.setId(doc.getId());
+            car.setBrand(doc.getString("brand"));
+            car.setModel(doc.getString("model"));
+
+            Object yearObj = doc.get("year");
+            if (yearObj instanceof Long) {
+                car.setYear(((Long) yearObj).intValue());
+            } else if (yearObj instanceof Integer) {
+                car.setYear((Integer) yearObj);
+            }
+
+            Object mileageObj = doc.get("mileage");
+            if (mileageObj instanceof Long) {
+                car.setMileage(((Long) mileageObj).intValue());
+            } else if (mileageObj instanceof Integer) {
+                car.setMileage((Integer) mileageObj);
+            }
+
+            Object engineObj = doc.get("engineVolume");
+            if (engineObj instanceof Double) {
+                car.setEngineVolume((Double) engineObj);
+            }
+
+            Object priceObj = doc.get("price");
+            if (priceObj instanceof Double) {
+                car.setPrice((Double) priceObj);
+            }
+
+            car.setDescription(doc.getString("description"));
+            car.setOwnerId(doc.getString("ownerId"));
+
+            List<String> imageUrls = (List<String>) doc.get("imageUrls");
+            if (imageUrls != null && !imageUrls.isEmpty()) {
+                car.setImageUrls(imageUrls);
+            }
+
+            Date createdAt = doc.getDate("createdAt");
+            if (createdAt != null) {
+                car.setCreatedAt(createdAt);
+            }
+
+            // Проверяем избранное
+            car.setFavorite(Favorites.isFavorite(car));
+
+            return car;
         } catch (Exception e) {
-            Toast.makeText(this, "Ошибка Firebase: " + e.getMessage(), Toast.LENGTH_LONG).show();
             e.printStackTrace();
+            return null;
         }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        // Обновляем статус избранного и перезагружаем данные
         loadCars();
         bottomNavigationView.setSelectedItemId(R.id.nav_home);
     }

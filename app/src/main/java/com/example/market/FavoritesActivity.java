@@ -37,7 +37,7 @@ public class FavoritesActivity extends AppCompatActivity {
     }
 
     private void setupRecyclerView() {
-        // Use a copy of the list to avoid ConcurrentModificationException
+        // Используем копию списка
         favoriteCars = new ArrayList<>(Favorites.getFavoriteCars());
         favoritesAdapter = new FavoritesAdapter(favoriteCars, this);
         favoritesRecyclerView.setAdapter(favoritesAdapter);
@@ -45,13 +45,16 @@ public class FavoritesActivity extends AppCompatActivity {
         updateFavoritesList();
     }
 
-    private void updateFavoritesList() {
-        // Refresh the list from the source of truth
+    // Изменяем на public чтобы можно было вызывать из адаптера
+    public void updateFavoritesList() {
+        // Обновляем список из источника
         favoriteCars.clear();
         favoriteCars.addAll(Favorites.getFavoriteCars());
-        favoritesAdapter.notifyDataSetChanged();
+        if (favoritesAdapter != null) {
+            favoritesAdapter.notifyDataSetChanged();
+        }
 
-        // Update the visibility of the empty message
+        // Обновляем видимость сообщения о пустом списке
         if (favoriteCars.isEmpty()) {
             emptyText.setVisibility(View.VISIBLE);
             favoritesRecyclerView.setVisibility(View.GONE);
@@ -64,7 +67,7 @@ public class FavoritesActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        // Always update the list when the activity is resumed
+        // Всегда обновляем список при возобновлении активности
         updateFavoritesList();
     }
 }
