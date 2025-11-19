@@ -2,7 +2,8 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/white">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -15,17 +16,16 @@
             android:layout_height="?attr/actionBarSize"
             android:background="?attr/colorPrimary"
             app:title=""
-            app:navigationIcon="@drawable/ic_arrow_back">
+            app:navigationIcon="@drawable/ic_arrow_back" />
 
-            <include layout="@layout/toolbar_title" />
-
-        </androidx.appcompat.widget.Toolbar>
-
+        <!-- Исправленный RecyclerView для изображений -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/carImagesRecyclerView"
             android:layout_width="match_parent"
-            android:layout_height="250dp"
-            android:orientation="horizontal"
+            android:layout_height="280dp"
+            android:layout_margin="16dp"
+            android:background="@color/white"
+            android:padding="4dp"
             app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
 
         <LinearLayout
@@ -41,6 +41,7 @@
                 android:text="BMW X5"
                 android:textSize="26sp"
                 android:textStyle="bold"
+                android:textColor="@color/black"
                 android:layout_marginBottom="8dp" />
 
             <TextView
@@ -56,7 +57,7 @@
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="8dp"
+                app:cardCornerRadius="12dp"
                 app:cardElevation="4dp"
                 android:layout_marginBottom="16dp">
 
@@ -71,7 +72,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="Год: 2020"
-                        android:textSize="18sp"
+                        android:textSize="16sp"
+                        android:textColor="@color/black"
                         android:layout_marginBottom="8dp" />
 
                     <TextView
@@ -79,7 +81,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="Пробег: 45 000 км"
-                        android:textSize="18sp"
+                        android:textSize="16sp"
+                        android:textColor="@color/black"
                         android:layout_marginBottom="8dp" />
 
                     <TextView
@@ -87,14 +90,15 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="Объем: 3.0 л"
-                        android:textSize="18sp" />
+                        android:textSize="16sp"
+                        android:textColor="@color/black" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="8dp"
+                app:cardCornerRadius="12dp"
                 app:cardElevation="4dp"
                 android:layout_marginBottom="16dp">
 
@@ -108,8 +112,9 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="Описание:"
-                        android:textSize="20sp"
+                        android:textSize="18sp"
                         android:textStyle="bold"
+                        android:textColor="@color/black"
                         android:layout_marginBottom="8dp" />
 
                     <TextView
@@ -117,7 +122,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="Отличное состояние, один владелец, полная сервисная история."
-                        android:textSize="18sp"
+                        android:textSize="16sp"
+                        android:textColor="@color/black"
                         android:lineSpacingExtra="4dp" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
@@ -147,7 +153,6 @@
                 android:layout_marginBottom="8dp"
                 style="@style/AutoRuButton" />
 
-            <!-- Новая кнопка удаления -->
             <Button
                 android:id="@+id/deleteButton"
                 android:layout_width="match_parent"

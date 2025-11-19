@@ -78,6 +78,11 @@ public class Car implements Serializable {
     public boolean isLocal() { return isLocal; }
     public void setLocal(boolean local) { isLocal = local; }
 
+    // Метод для получения полного названия автомобиля
+    public String getFullName() {
+        return brand + " " + model;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

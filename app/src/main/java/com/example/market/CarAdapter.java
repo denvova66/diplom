@@ -48,7 +48,7 @@ public class CarAdapter extends RecyclerView.Adapter<CarAdapter.CarViewHolder> {
 
     @Override
     public int getItemCount() {
-        return carList.size();
+        return carList != null ? carList.size() : 0;
     }
 
     public void updateList(List<Car> newList) {
@@ -72,7 +72,7 @@ public class CarAdapter extends RecyclerView.Adapter<CarAdapter.CarViewHolder> {
 
             itemView.setOnClickListener(v -> {
                 int position = getAdapterPosition();
-                if (position != RecyclerView.NO_POSITION) {
+                if (position != RecyclerView.NO_POSITION && carList != null && position < carList.size()) {
                     Car car = carList.get(position);
                     Intent intent = new Intent(context, CarDetailActivity.class);
                     intent.putExtra("car", car);
@@ -82,14 +82,14 @@ public class CarAdapter extends RecyclerView.Adapter<CarAdapter.CarViewHolder> {
         }
 
         public void bind(Car car) {
+            if (car == null) return;
+
             brandModelText.setText(car.getBrand() + " " + car.getModel());
             yearText.setText(String.valueOf(car.getYear()));
             mileageText.setText(car.getMileage() + " км");
             priceText.setText(String.format("%.0f руб.", car.getPrice()));
 
-            // Загружаем изображение
             loadCarImage(car);
-
             updateFavoriteButton(car);
 
             favoriteButton.setOnClickListener(v -> {
@@ -111,17 +111,19 @@ public class CarAdapter extends RecyclerView.Adapter<CarAdapter.CarViewHolder> {
         }
 
         private void updateFavoriteButton(Car car) {
-            favoriteButton.setImageResource(car.isFavorite() ?
-                    R.drawable.ic_favorite_filled : R.drawable.ic_favorite);
+            if (favoriteButton != null) {
+                favoriteButton.setImageResource(car.isFavorite() ?
+                        R.drawable.ic_favorite_filled : R.drawable.ic_favorite);
+            }
         }
 
         private void loadCarImage(Car car) {
             if (car.getImageUrl() != null && !car.getImageUrl().isEmpty()) {
-                if (car.getImageUrl().startsWith("file://")) {
+                if (car.getImageUrl().startsWith("/")) {
                     // Локальное изображение из файловой системы
                     loadFromFile(car.getImageUrl());
                 } else if (car.getImageUrl().startsWith("local://")) {
-                    // Локальное изображение из drawable (старая реализация)
+                    // Локальное изображение из drawable
                     loadFromLocal(car.getImageUrl());
                 } else {
                     // URL изображение (Firebase Storage)
@@ -135,7 +137,7 @@ public class CarAdapter extends RecyclerView.Adapter<CarAdapter.CarViewHolder> {
 
         private void loadFromFile(String imagePath) {
             try {
-                File imageFile = new File(imagePath.replace("file://", ""));
+                File imageFile = new File(imagePath);
                 if (imageFile.exists()) {
                     Bitmap bitmap = BitmapFactory.decodeFile(imageFile.getAbsolutePath());
                     carImage.setImageBitmap(bitmap);

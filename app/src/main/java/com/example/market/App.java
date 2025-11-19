@@ -32,8 +32,7 @@ public class App extends Application {
 
         LocalCarManager.init(this);
         MusicManager.init(this);
-        Log.d(TAG, "LocalCarManager initialized successfully");
-        Log.d(TAG, "MusicManager initialized successfully");
+        Log.d(TAG, "LocalCarManager and MusicManager initialized successfully");
     }
 
     public static Context getContext() {
