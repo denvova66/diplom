@@ -46,9 +46,15 @@ public class CarDetailActivity extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
         mAuth = FirebaseAuth.getInstance();
         LocalCarManager.init(this);
+        ViewHistoryManager.init(this);
 
         // Получаем объект Car из Intent
         currentCar = (Car) getIntent().getSerializableExtra("car");
+
+        // Добавляем в историю просмотров
+        if (currentCar != null) {
+            ViewHistoryManager.addToHistory(currentCar);
+        }
 
         // Инициализируем номера телефонов
         initializePhoneNumbers();
@@ -108,7 +114,8 @@ public class CarDetailActivity extends AppCompatActivity {
             contactButton.setText("Позвонить: " + phoneNumber);
 
             // Настраиваем RecyclerView для изображений
-            carImagesRecyclerView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+            LinearLayoutManager layoutManager = new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
+            carImagesRecyclerView.setLayoutManager(layoutManager);
             CarImageAdapter adapter = new CarImageAdapter(currentCar.getImageUrls());
             carImagesRecyclerView.setAdapter(adapter);
 
@@ -217,6 +224,12 @@ public class CarDetailActivity extends AppCompatActivity {
         public void onBindViewHolder(@NonNull ImageViewHolder holder, int position) {
             String imageUrl = imageUrls.get(position);
 
+            // Устанавливаем фиксированную высоту для выравнивания
+            ViewGroup.LayoutParams params = holder.imageView.getLayoutParams();
+            params.height = 280; // Фиксированная высота
+            holder.imageView.setLayoutParams(params);
+            holder.imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+
             if (imageUrl.startsWith("local://")) {
                 String imageName = imageUrl.replace("local://", "");
                 int resourceId = getResources().getIdentifier(imageName, "drawable", getPackageName());
@@ -226,7 +239,6 @@ public class CarDetailActivity extends AppCompatActivity {
                     holder.imageView.setImageResource(R.drawable.ic_car_placeholder);
                 }
             } else if (imageUrl.startsWith("file://")) {
-                // Локальное изображение из файла
                 try {
                     String filePath = imageUrl.replace("file://", "");
                     java.io.File imageFile = new java.io.File(filePath);
@@ -243,6 +255,8 @@ public class CarDetailActivity extends AppCompatActivity {
                 Glide.with(CarDetailActivity.this)
                         .load(imageUrl)
                         .placeholder(R.drawable.ic_car_placeholder)
+                        .override(800, 280) // Фиксированный размер для выравнивания
+                        .centerCrop()
                         .into(holder.imageView);
             }
         }
@@ -258,6 +272,17 @@ public class CarDetailActivity extends AppCompatActivity {
                 super(itemView);
                 imageView = itemView.findViewById(R.id.carImage);
             }
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Обновляем данные при возвращении на экран
+        if (currentCar != null) {
+            // Обновляем состояние избранного
+            currentCar.setFavorite(Favorites.isFavorite(currentCar));
+            updateFavoriteButton();
         }
     }
 }

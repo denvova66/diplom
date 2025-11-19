@@ -1,94 +1,116 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp"
-    android:gravity="center"
     android:background="@color/white">
 
-    <!-- Добавляем Toolbar -->
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Авторизация"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:textColor="@color/red"
-        android:layout_marginTop="20dp"
-        android:layout_marginBottom="40dp" />
-
-    <EditText
-        android:id="@+id/emailEditText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Email"
-        android:inputType="textEmailAddress"
-        android:layout_marginBottom="16dp"
-        style="@style/AutoRuEditText" />
-
-    <EditText
-        android:id="@+id/passwordEditText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Пароль"
-        android:inputType="textPassword"
-        android:layout_marginBottom="24dp"
-        style="@style/AutoRuEditText" />
-
-    <ProgressBar
-        android:id="@+id/progressBar"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:visibility="gone"
-        android:layout_marginBottom="16dp" />
-
-    <Button
-        android:id="@+id/loginButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:text="Войти"
-        style="@style/AutoRuButton" />
-
-    <Button
-        android:id="@+id/registerButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        android:text="Зарегистрироваться"
-        style="@style/AutoRuButton" />
-
-    <!-- Переключатель Swag музыки -->
+    <!-- Swag и переключатель в правом верхнем углу -->
     <LinearLayout
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:padding="8dp">
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:background="@drawable/card_background"
+        android:padding="8dp"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:layout_margin="16dp">
 
         <TextView
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Swag"
-            android:textSize="16sp"
+            android:text="SWAG"
+            android:textSize="14sp"
             android:textStyle="bold"
-            android:textColor="@color/black" />
+            android:textColor="?attr/colorPrimary"
+            android:layout_marginEnd="8dp" />
 
         <Switch
             android:id="@+id/musicToggle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:showText="true"
-            android:textOff="OFF"
-            android:textOn="ON"
             android:thumb="@drawable/music_toggle_thumb"
-            android:track="@drawable/button_background" />
+            android:track="@drawable/music_toggle_background"
+            android:textOn=""
+            android:textOff=""
+            android:showText="false" />
 
     </LinearLayout>
 
-</LinearLayout>
+    <!-- Основной контент по центру -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="16dp"
+        android:layout_centerInParent="true">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Авторизация"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="?attr/colorPrimary"
+            android:layout_marginBottom="40dp" />
+
+        <EditText
+            android:id="@+id/emailEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Email"
+            android:inputType="textEmailAddress"
+            android:layout_marginBottom="16dp"
+            style="@style/AutoRuEditText" />
+
+        <EditText
+            android:id="@+id/passwordEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Пароль"
+            android:inputType="textPassword"
+            android:layout_marginBottom="24dp"
+            style="@style/AutoRuEditText" />
+
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:visibility="gone"
+            android:layout_marginBottom="16dp" />
+
+        <Button
+            android:id="@+id/loginButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="Войти"
+            style="@style/AutoRuButton" />
+
+        <Button
+            android:id="@+id/registerButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:text="Зарегистрироваться"
+            style="@style/AutoRuButton" />
+
+    </LinearLayout>
+
+    <!-- Версия приложения внизу по центру -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="v1.0.0"
+        android:textSize="12sp"
+        android:textColor="@color/gray"
+        android:layout_centerHorizontal="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="16dp" />
+
+</RelativeLayout>

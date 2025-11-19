@@ -163,8 +163,9 @@ public class AddCarActivity extends AppCompatActivity {
     }
 
     private boolean validateNumbers(int year, int mileage, double engineVolume, double price) {
-        if (year < 1900 || year > 2030) {
-            Toast.makeText(this, "Введите корректный год (1900-2030)", Toast.LENGTH_SHORT).show();
+        int currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR);
+        if (year < 1900 || year > currentYear + 1) {
+            Toast.makeText(this, "Введите корректный год (1900-" + (currentYear + 1) + ")", Toast.LENGTH_SHORT).show();
             return false;
         }
         if (mileage < 0) {
@@ -203,7 +204,6 @@ public class AddCarActivity extends AppCompatActivity {
 
         new Thread(() -> {
             final String localImagePath = saveImageToLocalStorage(imageUri);
-            final String finalImagePath = localImagePath != null ? localImagePath : "local://ic_car_placeholder";
 
             runOnUiThread(() -> {
                 Car car = new Car();
@@ -216,7 +216,7 @@ public class AddCarActivity extends AppCompatActivity {
                 car.setPrice(price);
                 car.setDescription(description);
                 car.setOwnerId(user.getUid());
-                car.setImageUrls(Collections.singletonList(finalImagePath));
+                car.setImageUrls(Collections.singletonList(localImagePath != null ? localImagePath : ""));
                 car.setCreatedAt(new Date());
                 car.setFavorite(false);
                 car.setLocal(true);
@@ -244,7 +244,10 @@ public class AddCarActivity extends AppCompatActivity {
 
             File imagesDir = new File(getFilesDir(), "car_images");
             if (!imagesDir.exists()) {
-                imagesDir.mkdirs();
+                if (!imagesDir.mkdirs()) {
+                    Log.e(TAG, "Failed to create directory");
+                    return null;
+                }
             }
 
             String fileName = "car_" + System.currentTimeMillis() + ".jpg";
@@ -260,7 +263,7 @@ public class AddCarActivity extends AppCompatActivity {
             inputStream.close();
             outputStream.close();
 
-            return "file://" + imageFile.getAbsolutePath();
+            return imageFile.getAbsolutePath();
 
         } catch (Exception e) {
             Log.e(TAG, "Ошибка сохранения изображения", e);

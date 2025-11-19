@@ -24,7 +24,8 @@ public class App extends Application {
 
         try {
             Favorites.init(this);
-            Log.d(TAG, "Favorites initialized successfully");
+            UserManager.init(this);
+            Log.d(TAG, "Favorites and UserManager initialized successfully");
         } catch (Exception e) {
             Log.e(TAG, "Favorites initialization failed", e);
             Favorites.clearCache();
@@ -32,8 +33,7 @@ public class App extends Application {
 
         LocalCarManager.init(this);
         MusicManager.init(this);
-        Log.d(TAG, "LocalCarManager initialized successfully");
-        Log.d(TAG, "MusicManager initialized successfully");
+        Log.d(TAG, "LocalCarManager and MusicManager initialized successfully");
     }
 
     public static Context getContext() {

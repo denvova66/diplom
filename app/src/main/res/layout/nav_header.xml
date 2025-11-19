@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="160dp"
+    android:orientation="vertical"
+    android:background="?attr/colorPrimary"
+    android:padding="16dp"
+    android:gravity="center_vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <!-- Аватарка пользователя -->
+        <ImageView
+            android:id="@+id/userAvatar"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:src="@drawable/ic_person"
+            android:background="@drawable/profile_icon_background"
+            android:padding="12dp"
+            app:tint="@color/white" />
+
+        <!-- Информация о пользователе -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="16dp">
+
+            <TextView
+                android:id="@+id/userNameText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Иван Иванов"
+                android:textColor="@color/white"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/userEmailText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="user@example.com"
+                android:textColor="@color/white"
+                android:textSize="14sp"
+                android:layout_marginTop="4dp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</LinearLayout>

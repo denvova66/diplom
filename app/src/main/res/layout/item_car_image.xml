@@ -6,10 +6,10 @@
 
     <ImageView
         android:id="@+id/carImage"
-        android:layout_width="300dp"
-        android:layout_height="200dp"
-        android:scaleType="centerCrop"
+        android:layout_width="392dp"
+        android:layout_height="184dp"
+        android:adjustViewBounds="true"
         android:background="@color/gray"
-        android:adjustViewBounds="true" />
+        android:scaleType="centerCrop" />
 
 </LinearLayout>

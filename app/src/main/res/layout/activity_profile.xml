@@ -1,95 +1,150 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:background="@color/white">
 
-    <androidx.appcompat.widget.Toolbar
-        android:id="@+id/toolbar"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        android:background="?attr/colorPrimary"
-        app:title=""
-        app:navigationIcon="@drawable/ic_arrow_back">
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
 
-        <include layout="@layout/toolbar_title" />
-
-    </androidx.appcompat.widget.Toolbar>
-
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="?attr/colorPrimary"
+            app:title="Профиль"
+            app:navigationIcon="@drawable/ic_arrow_back" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:padding="20dp">
 
+            <!-- Аватар и кнопка изменения -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:layout_marginBottom="24dp">
+
+                <ImageView
+                    android:id="@+id/userAvatar"
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:src="@drawable/ic_person"
+                    android:background="@drawable/profile_icon_background"
+                    android:padding="20dp"
+                    app:tint="@color/white" />
+
+                <Button
+                    android:id="@+id/changeAvatarButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Сменить аватар"
+                    android:layout_marginTop="12dp"
+                    style="@style/AutoRuButton.Small" />
+
+            </LinearLayout>
+
+            <!-- Поля профиля -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="8dp"
+                app:cardCornerRadius="12dp"
                 app:cardElevation="4dp"
                 android:layout_marginBottom="16dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:padding="16dp"
-                    android:gravity="center_vertical">
+                    android:orientation="vertical"
+                    android:padding="20dp">
 
-                    <ImageView
-                        android:layout_width="80dp"
-                        android:layout_height="80dp"
-                        android:src="@drawable/ic_person"
-                        android:background="@drawable/profile_icon_background"
-                        android:padding="16dp"
-                        app:tint="@color/white" />
-
-                    <LinearLayout
+                    <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:layout_marginStart="16dp">
+                        android:text="Личная информация"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="?attr/colorPrimary"
+                        android:layout_marginBottom="16dp" />
 
-                        <TextView
-                            android:id="@+id/userNameText"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Пользователь"
-                            android:textSize="24sp"
-                            android:textStyle="bold" />
+                    <EditText
+                        android:id="@+id/lastNameEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Фамилия *"
+                        android:layout_marginBottom="12dp"
+                        style="@style/AutoRuEditText" />
 
-                        <TextView
-                            android:id="@+id/userEmailText"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="user@example.com"
-                            android:textSize="18sp" />
+                    <EditText
+                        android:id="@+id/firstNameEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Имя *"
+                        android:layout_marginBottom="12dp"
+                        style="@style/AutoRuEditText" />
 
-                    </LinearLayout>
+                    <EditText
+                        android:id="@+id/middleNameEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Отчество"
+                        android:layout_marginBottom="12dp"
+                        style="@style/AutoRuEditText" />
+
+                    <EditText
+                        android:id="@+id/emailEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Email"
+                        android:inputType="textEmailAddress"
+                        android:enabled="false"
+                        android:layout_marginBottom="12dp"
+                        style="@style/AutoRuEditText" />
+
+                    <EditText
+                        android:id="@+id/phoneEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Телефон"
+                        android:inputType="phone"
+                        style="@style/AutoRuEditText" />
+
                 </LinearLayout>
+
             </androidx.cardview.widget.CardView>
 
+            <ProgressBar
+                android:id="@+id/progressBar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:visibility="gone"
+                android:layout_marginBottom="16dp" />
+
             <Button
-                android:id="@+id/addCarButton"
+                android:id="@+id/saveProfileButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/submit_ad"
-                android:layout_marginBottom="16dp"
+                android:text="Сохранить изменения"
+                android:layout_marginBottom="12dp"
                 style="@style/AutoRuButton" />
 
             <Button
                 android:id="@+id/logoutButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/logout"
-                android:layout_marginTop="32dp"
+                android:text="Выйти"
+                android:backgroundTint="@color/red"
                 style="@style/AutoRuButton" />
 
         </LinearLayout>
-    </ScrollView>
-</LinearLayout>
+
+    </LinearLayout>
+</ScrollView>
