@@ -52,7 +52,7 @@ public class RegisterActivity extends AppCompatActivity {
         middleNameEditText = findViewById(R.id.middleNameEditText);
         registerButton = findViewById(R.id.registerButton);
         backButton = findViewById(R.id.backButton);
-        musicToggle = findViewById(R.id.musicToggle);
+
         progressBar = findViewById(R.id.progressBar);
 
         registerButton.setOnClickListener(v -> registerUser());

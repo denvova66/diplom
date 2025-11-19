@@ -17,28 +17,7 @@
         android:padding="8dp"
         android:paddingStart="12dp"
         android:paddingEnd="12dp"
-        android:layout_margin="16dp">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="SWAG"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:textColor="@color/red"
-            android:layout_marginEnd="8dp" />
-
-        <Switch
-            android:id="@+id/musicToggle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:thumb="@drawable/music_toggle_thumb"
-            android:track="@drawable/music_toggle_background"
-            android:textOn=""
-            android:textOff=""
-            android:showText="false" />
-
-    </LinearLayout>
+        android:layout_margin="16dp"/>
 
     <!-- Стрелка назад в левом верхнем углу -->
     <ImageButton

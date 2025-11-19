@@ -47,7 +47,7 @@ public class LoginActivity extends AppCompatActivity {
         passwordEditText = findViewById(R.id.passwordEditText);
         loginButton = findViewById(R.id.loginButton);
         registerButton = findViewById(R.id.registerButton);
-        musicToggle = findViewById(R.id.musicToggle);
+
         progressBar = findViewById(R.id.progressBar);
 
         loginButton.setOnClickListener(v -> loginUser());
