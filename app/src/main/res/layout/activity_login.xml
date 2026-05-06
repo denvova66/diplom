@@ -1,95 +1,91 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white">
+    android:orientation="vertical"
+    android:background="@color/white"
+    android:padding="24dp"
+    android:gravity="center">
 
-    <!-- Swag и переключатель в правом верхнем углу -->
-    <LinearLayout
+    <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentEnd="true"
-        android:background="@drawable/card_background"
-        android:padding="8dp"
-        android:paddingStart="12dp"
-        android:paddingEnd="12dp"
-        android:layout_margin="16dp"/>
+        android:text="SwagBuyCar"
+        android:textSize="32sp"
+        android:textStyle="bold"
+        android:textColor="@color/red"
+        android:layout_marginBottom="48dp" />
 
-    <!-- Основной контент по центру -->
-    <LinearLayout
+    <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:padding="16dp"
-        android:layout_centerInParent="true">
+        android:layout_marginBottom="16dp"
+        app:boxBackgroundColor="#F5F5F5"
+        app:boxCornerRadiusBottomEnd="12dp"
+        app:boxCornerRadiusBottomStart="12dp"
+        app:boxCornerRadiusTopEnd="12dp"
+        app:boxCornerRadiusTopStart="12dp">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Авторизация"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:textColor="?attr/colorPrimary"
-            android:layout_marginBottom="40dp" />
-
-        <EditText
+        <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/emailEditText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Email"
             android:inputType="textEmailAddress"
-            android:layout_marginBottom="16dp"
-            style="@style/AutoRuEditText" />
+            android:textSize="16sp"
+            android:padding="16dp" />
+    </com.google.android.material.textfield.TextInputLayout>
 
-        <EditText
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        app:boxBackgroundColor="#F5F5F5"
+        app:boxCornerRadiusBottomEnd="12dp"
+        app:boxCornerRadiusBottomStart="12dp"
+        app:boxCornerRadiusTopEnd="12dp"
+        app:boxCornerRadiusTopStart="12dp"
+        app:passwordToggleEnabled="true">
+
+        <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/passwordEditText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Пароль"
             android:inputType="textPassword"
-            android:layout_marginBottom="24dp"
-            style="@style/AutoRuEditText" />
+            android:textSize="16sp"
+            android:padding="16dp" />
+    </com.google.android.material.textfield.TextInputLayout>
 
-        <ProgressBar
-            android:id="@+id/progressBar"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:visibility="gone"
-            android:layout_marginBottom="16dp" />
-
-        <Button
-            android:id="@+id/loginButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:text="Войти"
-            style="@style/AutoRuButton" />
-
-        <Button
-            android:id="@+id/registerButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:text="Зарегистрироваться"
-            style="@style/AutoRuButton" />
-
-    </LinearLayout>
-
-    <!-- Версия приложения внизу по центру -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="v1.0.0"
-        android:textSize="12sp"
-        android:textColor="@color/gray"
-        android:layout_centerHorizontal="true"
-        android:layout_alignParentBottom="true"
+    <Button
+        android:id="@+id/loginButton"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="Войти"
+        android:textColor="@color/white"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:backgroundTint="@color/red"
+        app:cornerRadius="12dp"
         android:layout_marginBottom="16dp" />
 
-</RelativeLayout>
+    <Button
+        android:id="@+id/registerButton"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="Зарегистрироваться"
+        android:textColor="@color/red"
+        android:textSize="18sp"
+        android:backgroundTint="@color/white"
+        app:cornerRadius="12dp"
+        app:strokeColor="@color/red"
+        app:strokeWidth="1dp" />
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:visibility="gone" />
+</LinearLayout>

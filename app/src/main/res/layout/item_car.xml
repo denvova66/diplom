@@ -3,74 +3,114 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="8dp"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="2dp"
-    app:cardUseCompatPadding="true">
+    android:layout_margin="6dp"
+    app:cardBackgroundColor="@color/white"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="2dp">
 
-    <RelativeLayout
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
 
-        <ImageView
-            android:id="@+id/carImage"
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="139dp"
-            android:scaleType="centerCrop"
-            android:src="@drawable/ic_car_placeholder" />
+            android:layout_height="200dp">
 
-        <ImageButton
-            android:id="@+id/favoriteButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_alignParentTop="true"
-            android:layout_alignParentEnd="true"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_favorite"
-            android:padding="12dp"
-            android:contentDescription="Add to favorites" />
+            <ImageView
+                android:id="@+id/carImage"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:src="@drawable/ic_car_placeholder" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_gravity="bottom"
+                android:background="@drawable/gradient_bottom" />
+
+            <ImageButton
+                android:id="@+id/favoriteButton"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_gravity="end|top"
+                android:layout_margin="8dp"
+                android:background="@drawable/circle_white"
+                android:padding="8dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_favorite" />
+        </FrameLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="12dp"
-            android:layout_below="@id/carImage">
+            android:padding="12dp">
+
+            <TextView
+                android:id="@+id/priceText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="4dp"
+                android:text="2 500 000 ₽"
+                android:textColor="@color/black"
+                android:textSize="20sp"
+                android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/brandModelText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="BMW X5"
-                android:textSize="18sp"
-                android:textStyle="bold" />
+                android:layout_marginBottom="8dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="BMW X5, 2020"
+                android:textColor="#666666"
+                android:textSize="14sp" />
 
-            <TextView
-                android:id="@+id/yearText"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="2020"
-                android:textSize="16sp" />
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
-            <TextView
-                android:id="@+id/mileageText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="45 000 км"
-                android:textSize="16sp" />
+                <TextView
+                    android:id="@+id/yearText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="2020"
+                    android:textColor="#999999"
+                    android:textSize="13sp" />
 
-            <TextView
-                android:id="@+id/priceText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="3 500 000 руб."
-                android:textColor="?attr/colorPrimary"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:layout_marginTop="4dp" />
+                <View
+                    android:layout_width="3dp"
+                    android:layout_height="3dp"
+                    android:layout_marginHorizontal="8dp"
+                    android:background="#CCCCCC" />
 
+                <TextView
+                    android:id="@+id/mileageText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="45 000 км"
+                    android:textColor="#999999"
+                    android:textSize="13sp" />
+
+                <View
+                    android:layout_width="3dp"
+                    android:layout_height="3dp"
+                    android:layout_marginHorizontal="8dp"
+                    android:background="#CCCCCC" />
+
+                <TextView
+                    android:id="@+id/engineText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="3.0 л"
+                    android:textColor="#999999"
+                    android:textSize="13sp" />
+            </LinearLayout>
         </LinearLayout>
-
-    </RelativeLayout>
-
+    </LinearLayout>
 </androidx.cardview.widget.CardView>

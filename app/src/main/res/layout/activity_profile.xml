@@ -1,150 +1,209 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white">
+    android:background="#F5F5F5"
+    android:orientation="vertical">
 
-    <LinearLayout
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/white"
+        app:elevation="0dp"
+        app:navigationIcon="@drawable/ic_arrow_back"
+        app:title="Профиль"
+        app:titleTextColor="@color/black" />
 
-        <androidx.appcompat.widget.Toolbar
-            android:id="@+id/toolbar"
-            android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            android:background="?attr/colorPrimary"
-            app:title="Профиль"
-            app:navigationIcon="@drawable/ic_arrow_back" />
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="20dp">
+            android:padding="16dp">
 
-            <!-- Аватар и кнопка изменения -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:layout_marginBottom="24dp">
-
-                <ImageView
-                    android:id="@+id/userAvatar"
-                    android:layout_width="120dp"
-                    android:layout_height="120dp"
-                    android:src="@drawable/ic_person"
-                    android:background="@drawable/profile_icon_background"
-                    android:padding="20dp"
-                    app:tint="@color/white" />
-
-                <Button
-                    android:id="@+id/changeAvatarButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Сменить аватар"
-                    android:layout_marginTop="12dp"
-                    style="@style/AutoRuButton.Small" />
-
-            </LinearLayout>
-
-            <!-- Поля профиля -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="4dp"
-                android:layout_marginBottom="16dp">
+                android:layout_marginBottom="16dp"
+                app:cardBackgroundColor="@color/white"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:gravity="center"
                     android:orientation="vertical"
-                    android:padding="20dp">
+                    android:padding="24dp">
+
+                    <ImageView
+                        android:id="@+id/userAvatar"
+                        android:layout_width="96dp"
+                        android:layout_height="96dp"
+                        android:layout_marginBottom="16dp"
+                        android:background="@drawable/circle_white"
+                        android:padding="24dp"
+                        android:src="@drawable/ic_person" />
 
                     <TextView
-                        android:layout_width="match_parent"
+                        android:id="@+id/userNameText"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Личная информация"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:textColor="?attr/colorPrimary"
-                        android:layout_marginBottom="16dp" />
+                        android:layout_marginBottom="4dp"
+                        android:text="Пользователь"
+                        android:textColor="@color/black"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
 
-                    <EditText
-                        android:id="@+id/lastNameEditText"
-                        android:layout_width="match_parent"
+                    <TextView
+                        android:id="@+id/userEmailText"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:hint="Фамилия *"
-                        android:layout_marginBottom="12dp"
-                        style="@style/AutoRuEditText" />
+                        android:text="user@example.com"
+                        android:textColor="#999999"
+                        android:textSize="14sp" />
 
-                    <EditText
-                        android:id="@+id/firstNameEditText"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:hint="Имя *"
-                        android:layout_marginBottom="12dp"
-                        style="@style/AutoRuEditText" />
-
-                    <EditText
-                        android:id="@+id/middleNameEditText"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:hint="Отчество"
-                        android:layout_marginBottom="12dp"
-                        style="@style/AutoRuEditText" />
-
-                    <EditText
-                        android:id="@+id/emailEditText"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:hint="Email"
-                        android:inputType="textEmailAddress"
-                        android:enabled="false"
-                        android:layout_marginBottom="12dp"
-                        style="@style/AutoRuEditText" />
-
-                    <EditText
-                        android:id="@+id/phoneEditText"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:hint="Телефон"
-                        android:inputType="phone"
-                        style="@style/AutoRuEditText" />
-
+                    <Button
+                        android:id="@+id/editProfileButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:layout_marginTop="16dp"
+                        android:background="@drawable/button_outline_red"
+                        android:paddingHorizontal="24dp"
+                        android:text="Редактировать"
+                        android:textColor="@color/red"
+                        android:textSize="13sp" />
                 </LinearLayout>
-
             </androidx.cardview.widget.CardView>
 
-            <ProgressBar
-                android:id="@+id/progressBar"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:visibility="gone"
-                android:layout_marginBottom="16dp" />
-
-            <Button
-                android:id="@+id/saveProfileButton"
+            <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Сохранить изменения"
-                android:layout_marginBottom="12dp"
-                style="@style/AutoRuButton" />
+                android:layout_marginBottom="16dp"
+                app:cardBackgroundColor="@color/white"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:id="@+id/myAdsButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:background="?attr/selectableItemBackground"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="16dp">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:layout_marginEnd="16dp"
+                            android:src="@drawable/ic_add" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Мои объявления"
+                            android:textColor="@color/black"
+                            android:textSize="16sp" />
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:alpha="0.3"
+                            android:src="@drawable/ic_chevron_right" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="#F0F0F0" />
+
+                    <LinearLayout
+                        android:id="@+id/favoritesButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:background="?attr/selectableItemBackground"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="16dp">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:layout_marginEnd="16dp"
+                            android:src="@drawable/ic_favorite" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Избранное"
+                            android:textColor="@color/black"
+                            android:textSize="16sp" />
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:alpha="0.3"
+                            android:src="@drawable/ic_chevron_right" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="#F0F0F0" />
+
+                    <LinearLayout
+                        android:id="@+id/settingsButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:background="?attr/selectableItemBackground"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="16dp">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:layout_marginEnd="16dp"
+                            android:src="@drawable/ic_settings" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Настройки"
+                            android:textColor="@color/black"
+                            android:textSize="16sp" />
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:alpha="0.3"
+                            android:src="@drawable/ic_chevron_right" />
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
 
             <Button
                 android:id="@+id/logoutButton"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="48dp"
+                android:background="@drawable/button_outline_gray"
                 android:text="Выйти"
-                android:backgroundTint="@color/red"
-                style="@style/AutoRuButton" />
-
+                android:textColor="#999999"
+                android:textSize="14sp" />
         </LinearLayout>
-
-    </LinearLayout>
-</ScrollView>
+    </ScrollView>
+</LinearLayout>
