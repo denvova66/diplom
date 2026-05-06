@@ -1,7 +1,6 @@
 package com.example.market;
 
 import android.content.Intent;
-import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -71,24 +70,14 @@ public class CarDetailActivity extends AppCompatActivity {
         priceText = findViewById(R.id.priceText);
         descriptionText = findViewById(R.id.descriptionText);
 
+        Button editButton = findViewById(R.id.editButton);
+        Button chatButton = findViewById(R.id.chatButton);
         Button contactButton = findViewById(R.id.contactButton);
         Button favoriteButton = findViewById(R.id.favoriteButton);
         Button deleteButton = findViewById(R.id.deleteButton);
-        Button editButton = findViewById(R.id.editButton);
-        Button chatButton = findViewById(R.id.chatButton);
+        Button reviewsButton = findViewById(R.id.reviewsButton);
+        Button orderButton = findViewById(R.id.orderButton);
 
-        if (contactButton != null) {
-            contactButton.setOnClickListener(v -> callSeller());
-        }
-        if (favoriteButton != null) {
-            favoriteButton.setOnClickListener(v -> {
-                toggleFavorite();
-                updateFavoriteButton(favoriteButton);
-            });
-        }
-        if (deleteButton != null) {
-            deleteButton.setOnClickListener(v -> deleteCar());
-        }
         if (editButton != null) {
             editButton.setOnClickListener(v -> {
                 Intent intent = new Intent(CarDetailActivity.this, EditCarActivity.class);
@@ -96,8 +85,36 @@ public class CarDetailActivity extends AppCompatActivity {
                 startActivity(intent);
             });
         }
+
         if (chatButton != null) {
             chatButton.setOnClickListener(v -> startChat());
+        }
+
+        if (contactButton != null) {
+            contactButton.setOnClickListener(v -> callSeller());
+        }
+
+        if (favoriteButton != null) {
+            favoriteButton.setOnClickListener(v -> {
+                toggleFavorite();
+                updateFavoriteButton(favoriteButton);
+            });
+        }
+
+        if (deleteButton != null) {
+            deleteButton.setOnClickListener(v -> deleteCar());
+        }
+
+        if (reviewsButton != null) {
+            reviewsButton.setOnClickListener(v -> {
+                Intent intent = new Intent(CarDetailActivity.this, ReviewsActivity.class);
+                intent.putExtra("targetUserId", currentCar.getOwnerId());
+                startActivity(intent);
+            });
+        }
+
+        if (orderButton != null) {
+            orderButton.setOnClickListener(v -> createOrder());
         }
     }
 
@@ -123,14 +140,18 @@ public class CarDetailActivity extends AppCompatActivity {
             }
 
             FirebaseUser currentUser = mAuth.getCurrentUser();
+            Button editBtn = findViewById(R.id.editButton);
+            Button deleteBtn = findViewById(R.id.deleteButton);
+            Button orderBtn = findViewById(R.id.orderButton);
+
             if (currentUser != null && currentUser.getUid().equals(currentCar.getOwnerId())) {
-                Button editBtn = findViewById(R.id.editButton);
-                Button deleteBtn = findViewById(R.id.deleteButton);
                 if (editBtn != null) editBtn.setVisibility(View.VISIBLE);
                 if (deleteBtn != null) deleteBtn.setVisibility(View.VISIBLE);
+                if (orderBtn != null) orderBtn.setVisibility(View.GONE);
             } else {
-                Button deleteBtn = findViewById(R.id.deleteButton);
+                if (editBtn != null) editBtn.setVisibility(View.GONE);
                 if (deleteBtn != null) deleteBtn.setVisibility(View.GONE);
+                if (orderBtn != null) orderBtn.setVisibility(View.VISIBLE);
             }
         }
     }
@@ -142,7 +163,6 @@ public class CarDetailActivity extends AppCompatActivity {
     }
 
     private void callSeller() {
-        // Можно добавить номер телефона в модель Car
         Toast.makeText(this, "Функция звонка", Toast.LENGTH_SHORT).show();
     }
 
@@ -167,21 +187,28 @@ public class CarDetailActivity extends AppCompatActivity {
             return;
         }
 
-        if (currentCar.isLocal()) {
-            LocalCarManager.removeCar(currentCar.getId());
-            Toast.makeText(this, "Объявление удалено", Toast.LENGTH_SHORT).show();
-            finish();
-        } else {
-            db.collection("cars").document(currentCar.getId())
-                    .delete()
-                    .addOnSuccessListener(aVoid -> {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Удаление")
+                .setMessage("Вы уверены, что хотите удалить это объявление?")
+                .setPositiveButton("Удалить", (dialog, which) -> {
+                    if (currentCar.isLocal()) {
+                        LocalCarManager.removeCar(currentCar.getId());
                         Toast.makeText(this, "Объявление удалено", Toast.LENGTH_SHORT).show();
                         finish();
-                    })
-                    .addOnFailureListener(e -> {
-                        Toast.makeText(this, "Ошибка при удалении", Toast.LENGTH_SHORT).show();
-                    });
-        }
+                    } else {
+                        db.collection("cars").document(currentCar.getId())
+                                .delete()
+                                .addOnSuccessListener(aVoid -> {
+                                    Toast.makeText(this, "Объявление удалено", Toast.LENGTH_SHORT).show();
+                                    finish();
+                                })
+                                .addOnFailureListener(e -> {
+                                    Toast.makeText(this, "Ошибка при удалении", Toast.LENGTH_SHORT).show();
+                                });
+                    }
+                })
+                .setNegativeButton("Отмена", null)
+                .show();
     }
 
     // ========== ЧАТ ==========
@@ -201,7 +228,6 @@ public class CarDetailActivity extends AppCompatActivity {
             return;
         }
 
-        // Ищем существующий чат
         db.collection("chats")
                 .whereArrayContains("participants", currentUserId)
                 .get()
@@ -247,6 +273,47 @@ public class CarDetailActivity extends AppCompatActivity {
         intent.putExtra("chatId", chatId);
         intent.putExtra("userName", currentCar.getFullName());
         startActivity(intent);
+    }
+
+    // ========== ЗАКАЗ ==========
+    private void createOrder() {
+        if (currentCar == null) return;
+
+        String currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        String sellerId = currentCar.getOwnerId();
+
+        if (sellerId == null || sellerId.isEmpty() || sellerId.equals(currentUserId)) {
+            Toast.makeText(this, "Это ваше объявление", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Подтверждение заказа")
+                .setMessage("Вы хотите купить " + currentCar.getFullName() + " за " +
+                        String.format("%,.0f ₽", currentCar.getPrice()) + "?")
+                .setPositiveButton("Подтвердить", (dialog, which) -> {
+                    Map<String, Object> orderData = new HashMap<>();
+                    orderData.put("carId", currentCar.getId());
+                    orderData.put("buyerId", currentUserId);
+                    orderData.put("sellerId", sellerId);
+                    orderData.put("price", currentCar.getPrice());
+                    orderData.put("status", "pending");
+                    orderData.put("createdAt", new Date());
+
+                    db.collection("orders").add(orderData)
+                            .addOnSuccessListener(doc -> {
+                                Toast.makeText(this, "Заказ создан! ID: " + doc.getId(),
+                                        Toast.LENGTH_LONG).show();
+
+                                Intent intent = new Intent(CarDetailActivity.this, OrdersActivity.class);
+                                startActivity(intent);
+                            })
+                            .addOnFailureListener(e -> {
+                                Toast.makeText(this, "Ошибка создания заказа", Toast.LENGTH_SHORT).show();
+                            });
+                })
+                .setNegativeButton("Отмена", null)
+                .show();
     }
 
     // ========== Адаптер изображений ==========
