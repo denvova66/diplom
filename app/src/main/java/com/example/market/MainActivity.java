@@ -188,18 +188,26 @@ public class MainActivity extends AppCompatActivity {
         if (navigationView != null) {
             navigationView.setNavigationItemSelectedListener(item -> {
                 int itemId = item.getItemId();
-                if (itemId == R.id.nav_profile) startActivity(new Intent(this, ProfileActivity.class));
-                else if (itemId == R.id.nav_history) startActivity(new Intent(this, ViewHistoryActivity.class));
-                else if (itemId == R.id.nav_favorites) startActivity(new Intent(this, FavoritesActivity.class));
-                else if (itemId == R.id.nav_share) shareApp();
-                else if (itemId == R.id.nav_logout) logout();
+                if (itemId == R.id.nav_profile) {
+                    startActivity(new Intent(this, ProfileActivity.class));
+                } else if (itemId == R.id.nav_favorites) {
+                    startActivity(new Intent(this, FavoritesActivity.class));
+                } else if (itemId == R.id.nav_chats) {
+                    startActivity(new Intent(this, ChatListActivity.class));
+                } else if (itemId == R.id.nav_history) {
+                    startActivity(new Intent(this, ViewHistoryActivity.class));
+                } else if (itemId == R.id.nav_share) {
+                    shareApp();
+                } else if (itemId == R.id.nav_logout) {
+                    logout();
+                }
                 if (drawerLayout != null) drawerLayout.closeDrawer(navigationView);
                 return true;
             });
         }
     }
 
-    // ========== BRAND BOTTOM SHEET ==========
+    // BRAND BOTTOM SHEET
     private void showBrandBottomSheet() {
         BottomSheetDialog dialog = new BottomSheetDialog(this);
         View view = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_brand, null);
@@ -211,7 +219,6 @@ public class MainActivity extends AppCompatActivity {
         String[] popularBrands = {"BMW", "Mercedes-Benz", "Audi", "Toyota", "Kia",
                 "Hyundai", "Volkswagen", "Lada", "Renault", "Nissan"};
 
-        // Добавляем чипсы популярных брендов
         if (popularContainer != null) {
             popularContainer.removeAllViews();
             for (String brand : popularBrands) {
@@ -232,7 +239,6 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        // Все бренды
         List<String> allBrandsList = BrandData.getAllBrands();
 
         BrandAdapter allAdapter = new BrandAdapter(allBrandsList.toArray(new String[0]), brand -> {
@@ -251,7 +257,6 @@ public class MainActivity extends AppCompatActivity {
             allRecycler.setAdapter(allAdapter);
         }
 
-        // Сброс
         view.findViewById(R.id.resetBrandButton).setOnClickListener(v -> {
             selectedBrand = null;
             selectedModel = null;
@@ -263,7 +268,6 @@ public class MainActivity extends AppCompatActivity {
             applyFilters();
         });
 
-        // Поиск
         searchBrand.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -281,7 +285,7 @@ public class MainActivity extends AppCompatActivity {
         dialog.show();
     }
 
-    // ========== MODEL BOTTOM SHEET ==========
+    // MODEL BOTTOM SHEET
     private void showModelBottomSheet() {
         BottomSheetDialog dialog = new BottomSheetDialog(this);
         View view = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_model, null);
@@ -296,7 +300,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         List<String> modelsList = BrandData.getModelsForBrand(selectedBrand);
-
         if (modelsList.isEmpty()) {
             for (Car car : allCars) {
                 if (car != null && car.getModel() != null && !car.getModel().isEmpty()) {
@@ -307,7 +310,6 @@ public class MainActivity extends AppCompatActivity {
             }
             Collections.sort(modelsList);
         }
-
         modelsList.add(0, "Все модели");
 
         SimpleListAdapter adapter = new SimpleListAdapter(modelsList, item -> {
@@ -328,12 +330,11 @@ public class MainActivity extends AppCompatActivity {
             recycler.setLayoutManager(new LinearLayoutManager(this));
             recycler.setAdapter(adapter);
         }
-
         dialog.setContentView(view);
         dialog.show();
     }
 
-    // ========== YEAR BOTTOM SHEET ==========
+    // YEAR BOTTOM SHEET
     private void showYearBottomSheet() {
         BottomSheetDialog dialog = new BottomSheetDialog(this);
         View view = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_year, null);
@@ -345,25 +346,14 @@ public class MainActivity extends AppCompatActivity {
         int currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR);
         String[] years = new String[currentYear - 1970 + 2];
         years[0] = "Любой";
-        for (int i = 1; i < years.length; i++) {
-            years[i] = String.valueOf(currentYear - i + 1);
-        }
+        for (int i = 1; i < years.length; i++) years[i] = String.valueOf(currentYear - i + 1);
 
-        SimpleListAdapter fromAdapter = new SimpleListAdapter(
-                java.util.Arrays.asList(years),
-                year -> {
-                    if (year.equals("Любой")) selectedYearFrom = null;
-                    else selectedYearFrom = Integer.parseInt(year);
-                }
-        );
-
-        SimpleListAdapter toAdapter = new SimpleListAdapter(
-                java.util.Arrays.asList(years),
-                year -> {
-                    if (year.equals("Любой")) selectedYearTo = null;
-                    else selectedYearTo = Integer.parseInt(year);
-                }
-        );
+        SimpleListAdapter fromAdapter = new SimpleListAdapter(java.util.Arrays.asList(years), year -> {
+            selectedYearFrom = year.equals("Любой") ? null : Integer.parseInt(year);
+        });
+        SimpleListAdapter toAdapter = new SimpleListAdapter(java.util.Arrays.asList(years), year -> {
+            selectedYearTo = year.equals("Любой") ? null : Integer.parseInt(year);
+        });
 
         if (fromRecycler != null) {
             fromRecycler.setLayoutManager(new LinearLayoutManager(this));
@@ -373,7 +363,6 @@ public class MainActivity extends AppCompatActivity {
             toRecycler.setLayoutManager(new LinearLayoutManager(this));
             toRecycler.setAdapter(toAdapter);
         }
-
         if (applyButton != null) {
             applyButton.setOnClickListener(v -> {
                 if (selectedYearFrom == null && selectedYearTo == null) {
@@ -393,12 +382,11 @@ public class MainActivity extends AppCompatActivity {
                 applyFilters();
             });
         }
-
         dialog.setContentView(view);
         dialog.show();
     }
 
-    // ========== PRICE BOTTOM SHEET ==========
+    // PRICE BOTTOM SHEET
     private void showPriceBottomSheet() {
         BottomSheetDialog dialog = new BottomSheetDialog(this);
         View view = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_price, null);
@@ -418,90 +406,63 @@ public class MainActivity extends AppCompatActivity {
                 @Override public void onStopTrackingTouch(SeekBar seekBar) {}
             });
         }
-
         if (applyButton != null) {
             applyButton.setOnClickListener(v -> {
                 String fromStr = fromEdit != null ? fromEdit.getText().toString() : "";
                 String toStr = toEdit != null ? toEdit.getText().toString() : "";
-
                 selectedPriceFrom = fromStr.isEmpty() ? null : Double.parseDouble(fromStr);
                 selectedPriceTo = toStr.isEmpty() ? null : Double.parseDouble(toStr);
-
                 if (selectedPriceFrom == null && selectedPriceTo == null) {
                     chipPrice.setText("Цена ▾");
                     chipPrice.setChipBackgroundColorResource(android.R.color.transparent);
                 } else {
-                    String text = (selectedPriceFrom != null ? formatPrice(selectedPriceFrom) : "0")
-                            + " – " + (selectedPriceTo != null ? formatPrice(selectedPriceTo) : "∞");
-                    chipPrice.setText(text);
+                    chipPrice.setText((selectedPriceFrom != null ? formatPrice(selectedPriceFrom) : "0") + " – " + (selectedPriceTo != null ? formatPrice(selectedPriceTo) : "∞"));
                     chipPrice.setChipBackgroundColorResource(R.color.red_light);
                 }
                 dialog.dismiss();
                 applyFilters();
             });
         }
-
         dialog.setContentView(view);
         dialog.show();
     }
 
-    // ========== MILEAGE BOTTOM SHEET ==========
+    // MILEAGE BOTTOM SHEET
     private void showMileageBottomSheet() {
         BottomSheetDialog dialog = new BottomSheetDialog(this);
         View view = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_mileage, null);
-
         RecyclerView recycler = view.findViewById(R.id.mileageRecycler);
-
-        String[] mileages = {
-                "Любой пробег",
-                "До 10 000 км", "10 000 – 50 000 км", "50 000 – 100 000 км",
-                "100 000 – 150 000 км", "150 000 – 200 000 км", "Свыше 200 000 км"
-        };
-
-        SimpleListAdapter adapter = new SimpleListAdapter(
-                java.util.Arrays.asList(mileages),
-                item -> {
-                    switch (item) {
-                        case "Любой пробег":
-                            selectedMileageFrom = null; selectedMileageTo = null; break;
-                        case "До 10 000 км":
-                            selectedMileageFrom = 0; selectedMileageTo = 10000; break;
-                        case "10 000 – 50 000 км":
-                            selectedMileageFrom = 10000; selectedMileageTo = 50000; break;
-                        case "50 000 – 100 000 км":
-                            selectedMileageFrom = 50000; selectedMileageTo = 100000; break;
-                        case "100 000 – 150 000 км":
-                            selectedMileageFrom = 100000; selectedMileageTo = 150000; break;
-                        case "150 000 – 200 000 км":
-                            selectedMileageFrom = 150000; selectedMileageTo = 200000; break;
-                        case "Свыше 200 000 км":
-                            selectedMileageFrom = 200000; selectedMileageTo = Integer.MAX_VALUE; break;
-                    }
-
-                    if (selectedMileageFrom == null) {
-                        chipMileage.setText("Пробег ▾");
-                        chipMileage.setChipBackgroundColorResource(android.R.color.transparent);
-                    } else {
-                        chipMileage.setText(item);
-                        chipMileage.setChipBackgroundColorResource(R.color.red_light);
-                    }
-                    dialog.dismiss();
-                    applyFilters();
-                }
-        );
-
+        String[] mileages = {"Любой пробег", "До 10 000 км", "10 000 – 50 000 км", "50 000 – 100 000 км", "100 000 – 150 000 км", "150 000 – 200 000 км", "Свыше 200 000 км"};
+        SimpleListAdapter adapter = new SimpleListAdapter(java.util.Arrays.asList(mileages), item -> {
+            switch (item) {
+                case "Любой пробег": selectedMileageFrom = null; selectedMileageTo = null; break;
+                case "До 10 000 км": selectedMileageFrom = 0; selectedMileageTo = 10000; break;
+                case "10 000 – 50 000 км": selectedMileageFrom = 10000; selectedMileageTo = 50000; break;
+                case "50 000 – 100 000 км": selectedMileageFrom = 50000; selectedMileageTo = 100000; break;
+                case "100 000 – 150 000 км": selectedMileageFrom = 100000; selectedMileageTo = 150000; break;
+                case "150 000 – 200 000 км": selectedMileageFrom = 150000; selectedMileageTo = 200000; break;
+                case "Свыше 200 000 км": selectedMileageFrom = 200000; selectedMileageTo = Integer.MAX_VALUE; break;
+            }
+            if (selectedMileageFrom == null) {
+                chipMileage.setText("Пробег ▾");
+                chipMileage.setChipBackgroundColorResource(android.R.color.transparent);
+            } else {
+                chipMileage.setText(item);
+                chipMileage.setChipBackgroundColorResource(R.color.red_light);
+            }
+            dialog.dismiss();
+            applyFilters();
+        });
         if (recycler != null) {
             recycler.setLayoutManager(new LinearLayoutManager(this));
             recycler.setAdapter(adapter);
         }
-
         dialog.setContentView(view);
         dialog.show();
     }
 
     private void showSortOptions() {
         String[] options = {"По умолчанию", "Цена ↑", "Цена ↓", "Год ↑", "Год ↓", "Пробег ↑", "Пробег ↓"};
-
         new androidx.appcompat.app.AlertDialog.Builder(this)
                 .setTitle("Сортировка")
                 .setItems(options, (dialog, which) -> {
@@ -526,18 +487,11 @@ public class MainActivity extends AppCompatActivity {
 
     private void applyFilters() {
         if (allCars == null) { filteredCars.clear(); updateUI(); return; }
-
         filteredCars.clear();
-        String searchText = searchEditText != null ?
-                searchEditText.getText().toString().trim().toLowerCase() : "";
-
+        String searchText = searchEditText != null ? searchEditText.getText().toString().trim().toLowerCase() : "";
         for (Car car : allCars) {
             if (car == null) continue;
-
-            boolean matches = searchText.isEmpty() ||
-                    car.getFullName().toLowerCase().contains(searchText) ||
-                    String.valueOf((int)car.getPrice()).contains(searchText);
-
+            boolean matches = searchText.isEmpty() || car.getFullName().toLowerCase().contains(searchText) || String.valueOf((int)car.getPrice()).contains(searchText);
             if (selectedBrand != null && !car.getBrand().equalsIgnoreCase(selectedBrand)) matches = false;
             if (selectedModel != null && !car.getModel().equalsIgnoreCase(selectedModel)) matches = false;
             if (selectedYearFrom != null && car.getYear() < selectedYearFrom) matches = false;
@@ -546,7 +500,6 @@ public class MainActivity extends AppCompatActivity {
             if (selectedPriceTo != null && car.getPrice() > selectedPriceTo) matches = false;
             if (selectedMileageFrom != null && car.getMileage() < selectedMileageFrom) matches = false;
             if (selectedMileageTo != null && car.getMileage() > selectedMileageTo) matches = false;
-
             if (matches) filteredCars.add(car);
         }
         updateUI();
@@ -555,13 +508,9 @@ public class MainActivity extends AppCompatActivity {
     private void loadCars() {
         showLoading(true);
         allCars.clear();
-
         List<Car> localCars = LocalCarManager.loadCars();
         if (localCars != null && !localCars.isEmpty()) allCars.addAll(localCars);
-
-        db.collection("cars")
-                .orderBy("createdAt", Query.Direction.DESCENDING)
-                .get()
+        db.collection("cars").orderBy("createdAt", Query.Direction.DESCENDING).get()
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful() && task.getResult() != null) {
                         for (DocumentSnapshot doc : task.getResult()) {
@@ -573,10 +522,7 @@ public class MainActivity extends AppCompatActivity {
                     applyFilters();
                     showLoading(false);
                 })
-                .addOnFailureListener(e -> {
-                    applyFilters();
-                    showLoading(false);
-                });
+                .addOnFailureListener(e -> { applyFilters(); showLoading(false); });
     }
 
     private void loadUserData() {
@@ -590,8 +536,7 @@ public class MainActivity extends AppCompatActivity {
                         TextView name = header.findViewById(R.id.userNameText);
                         TextView email = header.findViewById(R.id.userEmailText);
                         if (name != null) name.setText("Пользователь");
-                        if (email != null && firebaseUser.getEmail() != null)
-                            email.setText(firebaseUser.getEmail());
+                        if (email != null && firebaseUser.getEmail() != null) email.setText(firebaseUser.getEmail());
                     }
                 }
             });
@@ -604,14 +549,8 @@ public class MainActivity extends AppCompatActivity {
         if (header == null) return;
         TextView name = header.findViewById(R.id.userNameText);
         TextView email = header.findViewById(R.id.userEmailText);
-        if (name != null) {
-            String fullName = user.getFullName();
-            name.setText(fullName != null && !fullName.isEmpty() ? fullName : "Пользователь");
-        }
-        if (email != null) {
-            String userEmail = user.getEmail();
-            email.setText(userEmail != null ? userEmail : "");
-        }
+        if (name != null) name.setText(user.getFullName() != null && !user.getFullName().isEmpty() ? user.getFullName() : "Пользователь");
+        if (email != null) email.setText(user.getEmail() != null ? user.getEmail() : "");
     }
 
     private void updateUI() {
@@ -649,9 +588,7 @@ public class MainActivity extends AppCompatActivity {
             Date d = doc.getDate("createdAt"); if (d != null) car.setCreatedAt(d);
             car.setFavorite(Favorites.isFavorite(car));
             return car;
-        } catch (Exception e) {
-            return null;
-        }
+        } catch (Exception e) { return null; }
     }
 
     private boolean containsCar(List<Car> cars, Car target) {
@@ -681,22 +618,18 @@ public class MainActivity extends AppCompatActivity {
     @Override protected void onResume() {
         super.onResume();
         loadCars(); loadUserData();
-        if (bottomNavigationView != null)
-            bottomNavigationView.setSelectedItemId(R.id.navigation_home);
+        if (bottomNavigationView != null) bottomNavigationView.setSelectedItemId(R.id.navigation_home);
     }
 
-    // ========== АДАПТЕРЫ ==========
+    // АДАПТЕРЫ
     class BrandAdapter extends RecyclerView.Adapter<BrandAdapter.ViewHolder> {
         private String[] items;
         private OnItemClickListener listener;
         interface OnItemClickListener { void onClick(String item); }
-        BrandAdapter(String[] items, OnItemClickListener listener) {
-            this.items = items; this.listener = listener;
-        }
+        BrandAdapter(String[] items, OnItemClickListener listener) { this.items = items; this.listener = listener; }
         void updateData(String[] newItems) { this.items = newItems; notifyDataSetChanged(); }
         @Override public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-            View v = LayoutInflater.from(parent.getContext())
-                    .inflate(R.layout.item_brand_list, parent, false);
+            View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_brand_list, parent, false);
             return new ViewHolder(v);
         }
         @Override public void onBindViewHolder(ViewHolder holder, int pos) {
@@ -714,12 +647,9 @@ public class MainActivity extends AppCompatActivity {
         private List<String> items;
         private OnItemClick listener;
         interface OnItemClick { void onClick(String item); }
-        SimpleListAdapter(List<String> items, OnItemClick listener) {
-            this.items = items; this.listener = listener;
-        }
+        SimpleListAdapter(List<String> items, OnItemClick listener) { this.items = items; this.listener = listener; }
         @Override public VH onCreateViewHolder(ViewGroup p, int t) {
-            View v = LayoutInflater.from(p.getContext())
-                    .inflate(android.R.layout.simple_list_item_1, p, false);
+            View v = LayoutInflater.from(p.getContext()).inflate(android.R.layout.simple_list_item_1, p, false);
             return new VH(v);
         }
         @Override public void onBindViewHolder(VH h, int pos) {

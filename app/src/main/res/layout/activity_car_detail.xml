@@ -148,6 +148,15 @@
                     android:layout_marginBottom="8dp" />
 
                 <Button
+                    android:id="@+id/chatButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:text="Написать продавцу"
+                    android:textColor="@color/white"
+                    android:backgroundTint="@color/red"
+                    android:layout_marginBottom="8dp" />
+
+                <Button
                     android:id="@+id/contactButton"
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
