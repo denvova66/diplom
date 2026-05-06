@@ -205,24 +205,35 @@ public class MainActivity extends AppCompatActivity {
         View view = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_brand, null);
 
         EditText searchBrand = view.findViewById(R.id.searchBrandEditText);
-        RecyclerView popularRecycler = view.findViewById(R.id.popularBrandsRecycler);
         RecyclerView allRecycler = view.findViewById(R.id.allBrandsRecycler);
+        com.google.android.flexbox.FlexboxLayout popularContainer = view.findViewById(R.id.popularBrandsContainer);
 
         String[] popularBrands = {"BMW", "Mercedes-Benz", "Audi", "Toyota", "Kia",
                 "Hyundai", "Volkswagen", "Lada", "Renault", "Nissan"};
 
-        List<String> allBrandsList = BrandData.getAllBrands();
+        // Добавляем чипсы популярных брендов
+        if (popularContainer != null) {
+            popularContainer.removeAllViews();
+            for (String brand : popularBrands) {
+                TextView chip = (TextView) LayoutInflater.from(this)
+                        .inflate(R.layout.item_brand_chip, popularContainer, false);
+                chip.setText(brand);
+                chip.setOnClickListener(v -> {
+                    selectedBrand = brand;
+                    selectedModel = null;
+                    chipBrand.setText(brand);
+                    chipBrand.setChipBackgroundColorResource(R.color.red_light);
+                    chipModel.setText("Модель ▾");
+                    chipModel.setChipBackgroundColorResource(android.R.color.transparent);
+                    dialog.dismiss();
+                    applyFilters();
+                });
+                popularContainer.addView(chip);
+            }
+        }
 
-        BrandAdapter popularAdapter = new BrandAdapter(popularBrands, brand -> {
-            selectedBrand = brand;
-            selectedModel = null;
-            chipBrand.setText(brand);
-            chipBrand.setChipBackgroundColorResource(R.color.red_light);
-            chipModel.setText("Модель ▾");
-            chipModel.setChipBackgroundColorResource(android.R.color.transparent);
-            dialog.dismiss();
-            applyFilters();
-        });
+        // Все бренды
+        List<String> allBrandsList = BrandData.getAllBrands();
 
         BrandAdapter allAdapter = new BrandAdapter(allBrandsList.toArray(new String[0]), brand -> {
             selectedBrand = brand;
@@ -235,16 +246,12 @@ public class MainActivity extends AppCompatActivity {
             applyFilters();
         });
 
-        if (popularRecycler != null) {
-            popularRecycler.setLayoutManager(new LinearLayoutManager(this));
-            popularRecycler.setAdapter(popularAdapter);
-        }
-
         if (allRecycler != null) {
             allRecycler.setLayoutManager(new LinearLayoutManager(this));
             allRecycler.setAdapter(allAdapter);
         }
 
+        // Сброс
         view.findViewById(R.id.resetBrandButton).setOnClickListener(v -> {
             selectedBrand = null;
             selectedModel = null;
@@ -256,15 +263,14 @@ public class MainActivity extends AppCompatActivity {
             applyFilters();
         });
 
+        // Поиск
         searchBrand.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
                 String searchText = s.toString().toLowerCase().trim();
                 List<String> filtered = new ArrayList<>();
                 for (String brand : allBrandsList) {
-                    if (brand.toLowerCase().contains(searchText)) {
-                        filtered.add(brand);
-                    }
+                    if (brand.toLowerCase().contains(searchText)) filtered.add(brand);
                 }
                 allAdapter.updateData(filtered.toArray(new String[0]));
             }
@@ -278,7 +284,7 @@ public class MainActivity extends AppCompatActivity {
     // ========== MODEL BOTTOM SHEET ==========
     private void showModelBottomSheet() {
         BottomSheetDialog dialog = new BottomSheetDialog(this);
-        View view = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_simple_list, null);
+        View view = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_model, null);
 
         TextView title = view.findViewById(R.id.titleText);
         RecyclerView recycler = view.findViewById(R.id.simpleRecycler);
@@ -289,19 +295,13 @@ public class MainActivity extends AppCompatActivity {
             title.setText("Сначала выберите марку");
         }
 
-        List<String> modelsList = new ArrayList<>();
-
-        if (selectedBrand != null) {
-            modelsList = BrandData.getModelsForBrand(selectedBrand);
-        }
+        List<String> modelsList = BrandData.getModelsForBrand(selectedBrand);
 
         if (modelsList.isEmpty()) {
             for (Car car : allCars) {
                 if (car != null && car.getModel() != null && !car.getModel().isEmpty()) {
                     if (selectedBrand == null || car.getBrand().equals(selectedBrand)) {
-                        if (!modelsList.contains(car.getModel())) {
-                            modelsList.add(car.getModel());
-                        }
+                        if (!modelsList.contains(car.getModel())) modelsList.add(car.getModel());
                     }
                 }
             }
@@ -576,7 +576,6 @@ public class MainActivity extends AppCompatActivity {
                 .addOnFailureListener(e -> {
                     applyFilters();
                     showLoading(false);
-                    Toast.makeText(this, "Ошибка загрузки", Toast.LENGTH_SHORT).show();
                 });
     }
 
@@ -584,9 +583,8 @@ public class MainActivity extends AppCompatActivity {
         FirebaseUser firebaseUser = mAuth.getCurrentUser();
         if (firebaseUser != null && navigationView != null) {
             UserManager.loadUserFromFirebase(firebaseUser, user -> {
-                if (user != null) {
-                    updateNavigationHeader(user);
-                } else {
+                if (user != null) updateNavigationHeader(user);
+                else {
                     View header = navigationView.getHeaderView(0);
                     if (header != null) {
                         TextView name = header.findViewById(R.id.userNameText);
@@ -602,13 +600,10 @@ public class MainActivity extends AppCompatActivity {
 
     private void updateNavigationHeader(User user) {
         if (navigationView == null || user == null) return;
-
         View header = navigationView.getHeaderView(0);
         if (header == null) return;
-
         TextView name = header.findViewById(R.id.userNameText);
         TextView email = header.findViewById(R.id.userEmailText);
-
         if (name != null) {
             String fullName = user.getFullName();
             name.setText(fullName != null && !fullName.isEmpty() ? fullName : "Пользователь");
@@ -622,7 +617,6 @@ public class MainActivity extends AppCompatActivity {
     private void updateUI() {
         if (carAdapter != null) carAdapter.updateList(new ArrayList<>(filteredCars));
         if (countText != null) countText.setText("Найдено " + filteredCars.size() + " авто");
-
         boolean isEmpty = filteredCars.isEmpty();
         if (emptyState != null) emptyState.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
         if (carsRecyclerView != null) carsRecyclerView.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
@@ -642,34 +636,27 @@ public class MainActivity extends AppCompatActivity {
             car.setId(doc.getId());
             car.setBrand(doc.getString("brand"));
             car.setModel(doc.getString("model"));
-
             Long y = doc.getLong("year"); if (y != null) car.setYear(y.intValue());
             Long m = doc.getLong("mileage"); if (m != null) car.setMileage(m.intValue());
             Double e = doc.getDouble("engineVolume"); if (e != null) car.setEngineVolume(e);
             Double p = doc.getDouble("price");
             if (p != null) car.setPrice(p);
             else { Long pl = doc.getLong("price"); if (pl != null) car.setPrice(pl.doubleValue()); }
-
             car.setDescription(doc.getString("description"));
             car.setOwnerId(doc.getString("ownerId"));
-
             List<String> images = (List<String>) doc.get("imageUrls");
             if (images != null) car.setImageUrls(new ArrayList<>(images));
-
             Date d = doc.getDate("createdAt"); if (d != null) car.setCreatedAt(d);
             car.setFavorite(Favorites.isFavorite(car));
             return car;
         } catch (Exception e) {
-            Log.e(TAG, "Error converting document", e);
             return null;
         }
     }
 
     private boolean containsCar(List<Car> cars, Car target) {
         if (target == null || target.getId() == null) return false;
-        for (Car c : cars) {
-            if (c != null && target.getId().equals(c.getId())) return true;
-        }
+        for (Car c : cars) if (c != null && target.getId().equals(c.getId())) return true;
         return false;
     }
 
@@ -683,111 +670,66 @@ public class MainActivity extends AppCompatActivity {
 
     private void logout() {
         new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Выход")
-                .setMessage("Вы уверены?")
+                .setTitle("Выход").setMessage("Вы уверены?")
                 .setPositiveButton("Выйти", (d, w) -> {
-                    mAuth.signOut();
-                    UserManager.logout();
+                    mAuth.signOut(); UserManager.logout();
                     startActivity(new Intent(this, LoginActivity.class));
                     finishAffinity();
-                })
-                .setNegativeButton("Отмена", null)
-                .show();
+                }).setNegativeButton("Отмена", null).show();
     }
 
-    @Override
-    protected void onResume() {
+    @Override protected void onResume() {
         super.onResume();
-        loadCars();
-        loadUserData();
+        loadCars(); loadUserData();
         if (bottomNavigationView != null)
             bottomNavigationView.setSelectedItemId(R.id.navigation_home);
     }
 
-    // ========== ВНУТРЕННИЕ АДАПТЕРЫ ==========
-
+    // ========== АДАПТЕРЫ ==========
     class BrandAdapter extends RecyclerView.Adapter<BrandAdapter.ViewHolder> {
         private String[] items;
         private OnItemClickListener listener;
-
-        interface OnItemClickListener {
-            void onClick(String item);
-        }
-
+        interface OnItemClickListener { void onClick(String item); }
         BrandAdapter(String[] items, OnItemClickListener listener) {
-            this.items = items;
-            this.listener = listener;
+            this.items = items; this.listener = listener;
         }
-
-        void updateData(String[] newItems) {
-            this.items = newItems;
-            notifyDataSetChanged();
-        }
-
-        @Override
-        public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+        void updateData(String[] newItems) { this.items = newItems; notifyDataSetChanged(); }
+        @Override public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
             View v = LayoutInflater.from(parent.getContext())
-                    .inflate(android.R.layout.simple_list_item_1, parent, false);
+                    .inflate(R.layout.item_brand_list, parent, false);
             return new ViewHolder(v);
         }
-
-        @Override
-        public void onBindViewHolder(ViewHolder holder, int pos) {
+        @Override public void onBindViewHolder(ViewHolder holder, int pos) {
             holder.text.setText(items[pos]);
             holder.itemView.setOnClickListener(v -> listener.onClick(items[pos]));
         }
-
-        @Override
-        public int getItemCount() {
-            return items != null ? items.length : 0;
-        }
-
+        @Override public int getItemCount() { return items != null ? items.length : 0; }
         class ViewHolder extends RecyclerView.ViewHolder {
             TextView text;
-            ViewHolder(View v) {
-                super(v);
-                text = v.findViewById(android.R.id.text1);
-            }
+            ViewHolder(View v) { super(v); text = v.findViewById(R.id.brandNameText); }
         }
     }
 
     class SimpleListAdapter extends RecyclerView.Adapter<SimpleListAdapter.VH> {
         private List<String> items;
         private OnItemClick listener;
-
-        interface OnItemClick {
-            void onClick(String item);
-        }
-
+        interface OnItemClick { void onClick(String item); }
         SimpleListAdapter(List<String> items, OnItemClick listener) {
-            this.items = items;
-            this.listener = listener;
+            this.items = items; this.listener = listener;
         }
-
-        @Override
-        public VH onCreateViewHolder(ViewGroup p, int t) {
+        @Override public VH onCreateViewHolder(ViewGroup p, int t) {
             View v = LayoutInflater.from(p.getContext())
                     .inflate(android.R.layout.simple_list_item_1, p, false);
             return new VH(v);
         }
-
-        @Override
-        public void onBindViewHolder(VH h, int pos) {
+        @Override public void onBindViewHolder(VH h, int pos) {
             h.text.setText(items.get(pos));
             h.itemView.setOnClickListener(v -> listener.onClick(items.get(pos)));
         }
-
-        @Override
-        public int getItemCount() {
-            return items != null ? items.size() : 0;
-        }
-
+        @Override public int getItemCount() { return items != null ? items.size() : 0; }
         class VH extends RecyclerView.ViewHolder {
             TextView text;
-            VH(View v) {
-                super(v);
-                text = v.findViewById(android.R.id.text1);
-            }
+            VH(View v) { super(v); text = v.findViewById(android.R.id.text1); }
         }
     }
 }

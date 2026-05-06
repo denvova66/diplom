@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "168651113637",
-    "project_id": "market-b845e",
-    "storage_bucket": "market-b845e.firebasestorage.app"
+    "project_number": "606249136171",
+    "project_id": "kupikolesa-65512",
+    "storage_bucket": "kupikolesa-65512.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:168651113637:android:cce79a792874d3f9bcb94c",
+        "mobilesdk_app_id": "1:606249136171:android:f90093996f29324726fa6e",
         "android_client_info": {
           "package_name": "com.example.market"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAvFIQudnIBhnk25RPGrIzJzEKR06dEptY"
+          "current_key": "AIzaSyCIdjKl6XS-qTWMtqiK0hJqhyEeFj_ltz4"
         }
       ],
       "services": {

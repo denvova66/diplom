@@ -6,10 +6,12 @@
     android:background="@drawable/bottom_sheet_bg"
     android:paddingBottom="24dp">
 
+    <!-- Заголовок -->
     <TextView
+        android:id="@+id/titleText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Выберите пробег"
+        android:text="Выберите модель"
         android:textSize="20sp"
         android:textStyle="bold"
         android:textColor="@color/black"
@@ -18,10 +20,11 @@
         android:paddingTop="20dp"
         android:paddingBottom="16dp" />
 
+    <!-- Список моделей -->
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/mileageRecycler"
+        android:id="@+id/simpleRecycler"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="400dp"
         android:paddingStart="16dp"
         android:paddingEnd="16dp" />
 </LinearLayout>

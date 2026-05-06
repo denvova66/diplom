@@ -9,7 +9,6 @@ import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
 
 import com.google.firebase.auth.FirebaseAuth;
 
@@ -34,7 +33,6 @@ public class LoginActivity extends AppCompatActivity {
         }
 
         initViews();
-        setupToolbar();
     }
 
     private void initViews() {
@@ -55,17 +53,9 @@ public class LoginActivity extends AppCompatActivity {
         }
     }
 
-    private void setupToolbar() {
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        if (toolbar != null) {
-            toolbar.setTitle("SwagBuyCar");
-            toolbar.setNavigationOnClickListener(v -> finish());
-        }
-    }
-
     private void loginUser() {
-        String email = emailEditText != null ? emailEditText.getText().toString().trim() : "";
-        String password = passwordEditText != null ? passwordEditText.getText().toString().trim() : "";
+        String email = emailEditText.getText().toString().trim();
+        String password = passwordEditText.getText().toString().trim();
 
         if (email.isEmpty()) {
             Toast.makeText(this, "Введите email", Toast.LENGTH_SHORT).show();
@@ -77,32 +67,34 @@ public class LoginActivity extends AppCompatActivity {
             return;
         }
 
-        if (progressBar != null) {
-            progressBar.setVisibility(View.VISIBLE);
-        }
-        if (loginButton != null) {
-            loginButton.setEnabled(false);
-        }
+        progressBar.setVisibility(View.VISIBLE);
+        loginButton.setEnabled(false);
 
         mAuth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, task -> {
-                    if (progressBar != null) {
-                        progressBar.setVisibility(View.GONE);
-                    }
-                    if (loginButton != null) {
-                        loginButton.setEnabled(true);
-                    }
+                    progressBar.setVisibility(View.GONE);
+                    loginButton.setEnabled(true);
 
                     if (task.isSuccessful()) {
-                        Toast.makeText(LoginActivity.this, "Вход выполнен успешно!", Toast.LENGTH_SHORT).show();
-                        startActivity(new Intent(this, MainActivity.class));
-                        finishAffinity();
+                        Toast.makeText(LoginActivity.this, "Вход выполнен!", Toast.LENGTH_SHORT).show();
+                        Intent intent = new Intent(LoginActivity.this, MainActivity.class);
+                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                        startActivity(intent);
+                        finish();
                     } else {
                         String errorMessage = "Ошибка входа";
                         if (task.getException() != null) {
                             String message = task.getException().getMessage();
                             if (message != null) {
-                                errorMessage = message;
+                                if (message.contains("There is no user record")) {
+                                    errorMessage = "Пользователь не найден";
+                                } else if (message.contains("password is invalid")) {
+                                    errorMessage = "Неверный пароль";
+                                } else if (message.contains("network error")) {
+                                    errorMessage = "Ошибка сети. Проверьте подключение к интернету";
+                                } else {
+                                    errorMessage = message;
+                                }
                             }
                         }
                         Toast.makeText(LoginActivity.this, errorMessage, Toast.LENGTH_LONG).show();

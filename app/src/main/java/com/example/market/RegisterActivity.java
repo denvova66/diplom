@@ -60,12 +60,12 @@ public class RegisterActivity extends AppCompatActivity {
     }
 
     private void registerUser() {
-        String email = getTextFromEditText(emailEditText);
-        String password = getTextFromEditText(passwordEditText);
-        String confirmPassword = getTextFromEditText(confirmPasswordEditText);
-        String firstName = getTextFromEditText(firstNameEditText);
-        String lastName = getTextFromEditText(lastNameEditText);
-        String middleName = getTextFromEditText(middleNameEditText);
+        String email = emailEditText.getText().toString().trim();
+        String password = passwordEditText.getText().toString().trim();
+        String confirmPassword = confirmPasswordEditText.getText().toString().trim();
+        String firstName = firstNameEditText.getText().toString().trim();
+        String lastName = lastNameEditText.getText().toString().trim();
+        String middleName = middleNameEditText.getText().toString().trim();
 
         // Валидация
         if (email.isEmpty() || password.isEmpty() || confirmPassword.isEmpty() ||
@@ -90,23 +90,13 @@ public class RegisterActivity extends AppCompatActivity {
         }
 
         // Показываем прогресс
-        if (progressBar != null) {
-            progressBar.setVisibility(View.VISIBLE);
-        }
-        if (registerButton != null) {
-            registerButton.setEnabled(false);
-        }
+        progressBar.setVisibility(View.VISIBLE);
+        registerButton.setEnabled(false);
 
         mAuth.createUserWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, task -> {
-                    if (progressBar != null) {
-                        progressBar.setVisibility(View.GONE);
-                    }
-                    if (registerButton != null) {
-                        registerButton.setEnabled(true);
-                    }
-
                     if (task.isSuccessful()) {
+                        // Регистрация успешна
                         FirebaseUser firebaseUser = mAuth.getCurrentUser();
                         if (firebaseUser != null) {
                             // Создаем пользователя
@@ -117,31 +107,43 @@ public class RegisterActivity extends AppCompatActivity {
                             user.setLastName(lastName);
                             user.setMiddleName(middleName);
 
-                            // Сохраняем пользователя
+                            // Сохраняем локально
                             UserManager.setCurrentUser(user);
+
+                            // Сохраняем в Firestore (не блокирует переход)
                             saveUserToFirestore(user);
 
                             Toast.makeText(RegisterActivity.this,
                                     "Регистрация успешна!", Toast.LENGTH_SHORT).show();
 
-                            startActivity(new Intent(this, MainActivity.class));
-                            finishAffinity();
+                            // Сразу переходим на главную
+                            Intent intent = new Intent(RegisterActivity.this, MainActivity.class);
+                            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                            startActivity(intent);
+                            finish();
                         }
                     } else {
+                        // Ошибка
+                        progressBar.setVisibility(View.GONE);
+                        registerButton.setEnabled(true);
+
                         String errorMessage = "Ошибка регистрации";
                         if (task.getException() != null) {
                             String message = task.getException().getMessage();
                             if (message != null) {
-                                errorMessage = message;
+                                if (message.contains("email address is already in use")) {
+                                    errorMessage = "Этот email уже используется";
+                                } else if (message.contains("network error")) {
+                                    errorMessage = "Ошибка сети. Проверьте подключение к интернету";
+                                } else {
+                                    errorMessage = message;
+                                }
                             }
                         }
                         Toast.makeText(RegisterActivity.this, errorMessage, Toast.LENGTH_LONG).show();
+                        Log.e(TAG, "Registration failed: " + errorMessage);
                     }
                 });
-    }
-
-    private String getTextFromEditText(EditText editText) {
-        return editText != null ? editText.getText().toString().trim() : "";
     }
 
     private void saveUserToFirestore(User user) {
@@ -152,6 +154,7 @@ public class RegisterActivity extends AppCompatActivity {
         userData.put("middleName", user.getMiddleName());
         userData.put("avatarUrl", "");
         userData.put("phoneNumber", "");
+        userData.put("role", "user");
         userData.put("createdAt", new Date());
 
         FirebaseFirestore.getInstance()
@@ -161,6 +164,6 @@ public class RegisterActivity extends AppCompatActivity {
                 .addOnSuccessListener(aVoid ->
                         Log.d(TAG, "User saved to Firestore"))
                 .addOnFailureListener(e ->
-                        Log.e(TAG, "Error saving user to Firestore", e));
+                        Log.e(TAG, "Error saving user to Firestore: " + e.getMessage()));
     }
 }
