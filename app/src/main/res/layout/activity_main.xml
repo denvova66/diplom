@@ -6,14 +6,12 @@
     android:layout_height="match_parent"
     android:fitsSystemWindows="true">
 
-    <!-- Основной контент -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
         android:background="#F5F5F5">
 
-        <!-- Верхняя панель -->
         <com.google.android.material.appbar.AppBarLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -46,7 +44,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="SwagBuyCar"
+                        android:text="КупиКолёса"
                         android:textColor="@color/black"
                         android:textSize="20sp"
                         android:textStyle="bold" />
@@ -54,7 +52,6 @@
                 </LinearLayout>
             </androidx.appcompat.widget.Toolbar>
 
-            <!-- Поисковая строка -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -99,7 +96,6 @@
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
 
-                <!-- Filter Chips -->
                 <HorizontalScrollView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -112,20 +108,20 @@
                         android:orientation="horizontal">
 
                         <com.google.android.material.chip.Chip
-                            android:id="@+id/chipPrice"
-                            style="@style/FilterChipStyle"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:checkable="true"
-                            android:text="Цена" />
-
-                        <com.google.android.material.chip.Chip
                             android:id="@+id/chipBrand"
                             style="@style/FilterChipStyle"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:checkable="true"
                             android:text="Марка" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipModel"
+                            style="@style/FilterChipStyle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checkable="true"
+                            android:text="Модель" />
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chipYear"
@@ -136,6 +132,14 @@
                             android:text="Год" />
 
                         <com.google.android.material.chip.Chip
+                            android:id="@+id/chipPrice"
+                            style="@style/FilterChipStyle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checkable="true"
+                            android:text="Цена" />
+
+                        <com.google.android.material.chip.Chip
                             android:id="@+id/chipMileage"
                             style="@style/FilterChipStyle"
                             android:layout_width="wrap_content"
@@ -143,12 +147,19 @@
                             android:checkable="true"
                             android:text="Пробег" />
 
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipBody"
+                            style="@style/FilterChipStyle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checkable="true"
+                            android:text="Кузов" />
+
                     </LinearLayout>
                 </HorizontalScrollView>
             </LinearLayout>
         </com.google.android.material.appbar.AppBarLayout>
 
-        <!-- Счетчик найденных авто -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -177,13 +188,11 @@
                 android:textSize="13sp" />
         </LinearLayout>
 
-        <!-- Основной контент -->
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1">
 
-            <!-- Список автомобилей -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/carsRecyclerView"
                 android:layout_width="match_parent"
@@ -192,7 +201,6 @@
                 android:padding="8dp"
                 android:visibility="visible" />
 
-            <!-- Пустое состояние -->
             <LinearLayout
                 android:id="@+id/emptyState"
                 android:layout_width="match_parent"
@@ -237,7 +245,6 @@
                     android:textSize="16sp" />
             </LinearLayout>
 
-            <!-- Индикатор загрузки -->
             <ProgressBar
                 android:id="@+id/loadingState"
                 android:layout_width="wrap_content"
@@ -246,7 +253,6 @@
                 android:visibility="gone" />
         </FrameLayout>
 
-        <!-- Bottom Navigation -->
         <com.google.android.material.bottomnavigation.BottomNavigationView
             android:id="@+id/bottomNavigationView"
             android:layout_width="match_parent"
@@ -259,7 +265,6 @@
             app:menu="@menu/bottom_navigation" />
     </LinearLayout>
 
-    <!-- Навигационное меню -->
     <com.google.android.material.navigation.NavigationView
         android:id="@+id/navigationView"
         android:layout_width="wrap_content"

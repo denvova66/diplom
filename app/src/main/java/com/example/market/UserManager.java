@@ -2,15 +2,12 @@ package com.example.market;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.net.Uri;
 import android.util.Log;
 
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
 public class UserManager {
@@ -21,7 +18,7 @@ public class UserManager {
     private static final String TAG = "UserManager";
 
     public static void init(Context context) {
-        if (prefs == null) {
+        if (prefs == null && context != null) {
             prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
             loadUserFromPrefs();
         }
@@ -38,41 +35,47 @@ public class UserManager {
 
     public static void loadUserFromFirebase(FirebaseUser firebaseUser, UserLoadedCallback callback) {
         if (firebaseUser == null) {
-            callback.onUserLoaded(null);
+            if (callback != null) callback.onUserLoaded(null);
             return;
         }
 
-        FirebaseFirestore.getInstance().collection("users")
+        // Сначала создаем базового пользователя из Firebase Auth
+        User basicUser = new User();
+        basicUser.setId(firebaseUser.getUid());
+        basicUser.setEmail(firebaseUser.getEmail());
+        basicUser.setFirstName("");
+        basicUser.setLastName("");
+        basicUser.setMiddleName("");
+
+        FirebaseFirestore.getInstance()
+                .collection("users")
                 .document(firebaseUser.getUid())
                 .get()
                 .addOnCompleteListener(task -> {
-                    if (task.isSuccessful() && task.getResult() != null) {
+                    if (task.isSuccessful() && task.getResult() != null && task.getResult().exists()) {
                         DocumentSnapshot doc = task.getResult();
-                        if (doc.exists()) {
-                            User user = documentToUser(doc);
-                            setCurrentUser(user);
-                            callback.onUserLoaded(user);
-                        } else {
-                            // Создаем нового пользователя
-                            User newUser = new User();
-                            newUser.setId(firebaseUser.getUid());
-                            newUser.setEmail(firebaseUser.getEmail());
-                            newUser.setFirstName("");
-                            newUser.setLastName("");
-                            newUser.setMiddleName("");
-                            saveUserToFirestore(newUser);
-                            setCurrentUser(newUser);
-                            callback.onUserLoaded(newUser);
-                        }
+                        User user = documentToUser(doc);
+                        setCurrentUser(user);
+                        if (callback != null) callback.onUserLoaded(user);
                     } else {
-                        Log.e(TAG, "Error loading user from Firestore", task.getException());
-                        callback.onUserLoaded(null);
+                        // Если пользователя нет в Firestore, используем базового
+                        setCurrentUser(basicUser);
+                        if (callback != null) callback.onUserLoaded(basicUser);
+
+                        // Логируем ошибку только если это не PERMISSION_DENIED
+                        if (task.getException() != null &&
+                                !task.getException().getMessage().contains("PERMISSION_DENIED")) {
+                            Log.e(TAG, "Error loading user from Firestore", task.getException());
+                        }
                     }
                 });
     }
 
     public static void saveUserToFirestore(User user) {
-        FirebaseFirestore.getInstance().collection("users")
+        if (user == null) return;
+
+        FirebaseFirestore.getInstance()
+                .collection("users")
                 .document(user.getId())
                 .set(user)
                 .addOnSuccessListener(aVoid -> Log.d(TAG, "User saved to Firestore"))
@@ -87,18 +90,21 @@ public class UserManager {
         }
     }
 
-    public static void updateUserProfile(String firstName, String lastName, String middleName, String phoneNumber) {
+    public static void updateUserProfile(String firstName, String lastName,
+                                         String middleName, String phoneNumber) {
         if (currentUser != null) {
-            currentUser.setFirstName(firstName);
-            currentUser.setLastName(lastName);
-            currentUser.setMiddleName(middleName);
-            currentUser.setPhoneNumber(phoneNumber);
+            currentUser.setFirstName(firstName != null ? firstName : "");
+            currentUser.setLastName(lastName != null ? lastName : "");
+            currentUser.setMiddleName(middleName != null ? middleName : "");
+            currentUser.setPhoneNumber(phoneNumber != null ? phoneNumber : "");
             saveUserToPrefs();
             saveUserToFirestore(currentUser);
         }
     }
 
     private static User documentToUser(DocumentSnapshot doc) {
+        if (doc == null || !doc.exists()) return null;
+
         User user = new User();
         user.setId(doc.getId());
         user.setEmail(doc.getString("email"));
@@ -111,25 +117,27 @@ public class UserManager {
     }
 
     private static void saveUserToPrefs() {
-        if (currentUser != null) {
+        if (currentUser != null && prefs != null) {
             try {
                 JSONObject userJson = new JSONObject();
-                userJson.put("id", currentUser.getId());
-                userJson.put("email", currentUser.getEmail());
-                userJson.put("firstName", currentUser.getFirstName());
-                userJson.put("lastName", currentUser.getLastName());
-                userJson.put("middleName", currentUser.getMiddleName());
-                userJson.put("avatarUrl", currentUser.getAvatarUrl());
-                userJson.put("phoneNumber", currentUser.getPhoneNumber());
+                userJson.put("id", currentUser.getId() != null ? currentUser.getId() : "");
+                userJson.put("email", currentUser.getEmail() != null ? currentUser.getEmail() : "");
+                userJson.put("firstName", currentUser.getFirstName() != null ? currentUser.getFirstName() : "");
+                userJson.put("lastName", currentUser.getLastName() != null ? currentUser.getLastName() : "");
+                userJson.put("middleName", currentUser.getMiddleName() != null ? currentUser.getMiddleName() : "");
+                userJson.put("avatarUrl", currentUser.getAvatarUrl() != null ? currentUser.getAvatarUrl() : "");
+                userJson.put("phoneNumber", currentUser.getPhoneNumber() != null ? currentUser.getPhoneNumber() : "");
 
                 prefs.edit().putString(USER_KEY, userJson.toString()).apply();
-            } catch (JSONException e) {
+            } catch (Exception e) {
                 Log.e(TAG, "Error saving user to prefs", e);
             }
         }
     }
 
     private static void loadUserFromPrefs() {
+        if (prefs == null) return;
+
         try {
             String userJsonString = prefs.getString(USER_KEY, null);
             if (userJsonString != null) {
@@ -152,7 +160,9 @@ public class UserManager {
 
     public static void logout() {
         currentUser = null;
-        prefs.edit().remove(USER_KEY).apply();
+        if (prefs != null) {
+            prefs.edit().remove(USER_KEY).apply();
+        }
     }
 
     public interface UserLoadedCallback {

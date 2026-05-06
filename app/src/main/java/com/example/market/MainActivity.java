@@ -7,10 +7,13 @@ import android.os.Looper;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -21,6 +24,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.navigation.NavigationView;
 import com.google.firebase.auth.FirebaseAuth;
@@ -32,9 +36,7 @@ import com.google.firebase.firestore.Query;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
@@ -50,15 +52,18 @@ public class MainActivity extends AppCompatActivity {
     private FirebaseFirestore db;
     private BottomNavigationView bottomNavigationView;
 
-    private Chip chipPrice;
-    private Chip chipBrand;
-    private Chip chipYear;
-    private Chip chipMileage;
-
-    private View emptyState;
-    private View loadingState;
+    private Chip chipBrand, chipModel, chipYear, chipPrice, chipMileage;
+    private View emptyState, loadingState;
     private TextView countText;
-    private Button addFirstCarButton;
+
+    private String selectedBrand = null;
+    private String selectedModel = null;
+    private Integer selectedYearFrom = null;
+    private Integer selectedYearTo = null;
+    private Double selectedPriceFrom = null;
+    private Double selectedPriceTo = null;
+    private Integer selectedMileageFrom = null;
+    private Integer selectedMileageTo = null;
 
     private Handler searchHandler = new Handler(Looper.getMainLooper());
     private Runnable searchRunnable;
@@ -95,92 +100,87 @@ public class MainActivity extends AppCompatActivity {
         searchEditText = findViewById(R.id.searchEditText);
         bottomNavigationView = findViewById(R.id.bottomNavigationView);
 
-        chipPrice = findViewById(R.id.chipPrice);
         chipBrand = findViewById(R.id.chipBrand);
+        chipModel = findViewById(R.id.chipModel);
         chipYear = findViewById(R.id.chipYear);
+        chipPrice = findViewById(R.id.chipPrice);
         chipMileage = findViewById(R.id.chipMileage);
 
         emptyState = findViewById(R.id.emptyState);
         loadingState = findViewById(R.id.loadingState);
         countText = findViewById(R.id.countText);
-        addFirstCarButton = findViewById(R.id.addFirstCarButton);
 
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        if (toolbar != null) {
-            toolbar.setTitle("");
+        Button addFirstCarButton = findViewById(R.id.addFirstCarButton);
+        if (addFirstCarButton != null) {
+            addFirstCarButton.setOnClickListener(v ->
+                    startActivity(new Intent(MainActivity.this, AddCarActivity.class)));
         }
 
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        if (toolbar != null) toolbar.setTitle("");
+
         if (carsRecyclerView != null) {
-            LinearLayoutManager layoutManager = new LinearLayoutManager(this);
-            carsRecyclerView.setLayoutManager(layoutManager);
+            carsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
             carAdapter = new CarAdapter(filteredCars, this);
             carsRecyclerView.setAdapter(carAdapter);
         }
 
-        if (addFirstCarButton != null) {
-            addFirstCarButton.setOnClickListener(v -> {
-                startActivity(new Intent(MainActivity.this, AddCarActivity.class));
-            });
-        }
-
         TextView sortButton = findViewById(R.id.sortButton);
-        if (sortButton != null) {
-            sortButton.setOnClickListener(v -> showSortOptions());
-        }
+        if (sortButton != null) sortButton.setOnClickListener(v -> showSortOptions());
     }
 
     private void setupListeners() {
         ImageView menuButton = findViewById(R.id.menuButton);
         if (menuButton != null && drawerLayout != null) {
             menuButton.setOnClickListener(v -> {
-                if (drawerLayout.isDrawerOpen(navigationView)) {
+                if (drawerLayout.isDrawerOpen(navigationView))
                     drawerLayout.closeDrawer(navigationView);
-                } else {
+                else
                     drawerLayout.openDrawer(navigationView);
-                }
             });
         }
 
         if (searchEditText != null) {
             searchEditText.addTextChangedListener(new TextWatcher() {
-                @Override
-                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-
-                @Override
-                public void onTextChanged(CharSequence s, int start, int before, int count) {
-                    if (searchRunnable != null) {
-                        searchHandler.removeCallbacks(searchRunnable);
-                    }
+                @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    if (searchRunnable != null) searchHandler.removeCallbacks(searchRunnable);
                 }
-
-                @Override
-                public void afterTextChanged(Editable s) {
+                @Override public void afterTextChanged(Editable s) {
                     searchRunnable = () -> applyFilters();
                     searchHandler.postDelayed(searchRunnable, 300);
                 }
             });
         }
 
-        if (chipPrice != null) {
-            chipPrice.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                if (isChecked) showPriceFilter();
-                applyFilters();
+        if (chipBrand != null) chipBrand.setOnClickListener(v -> showBrandBottomSheet());
+        if (chipModel != null) chipModel.setOnClickListener(v -> showModelBottomSheet());
+        if (chipYear != null) chipYear.setOnClickListener(v -> showYearBottomSheet());
+        if (chipPrice != null) chipPrice.setOnClickListener(v -> showPriceBottomSheet());
+        if (chipMileage != null) chipMileage.setOnClickListener(v -> showMileageBottomSheet());
+    }
+
+    private void setupBottomNavigation() {
+        if (bottomNavigationView != null) {
+            bottomNavigationView.setOnItemSelectedListener(item -> {
+                int itemId = item.getItemId();
+                if (itemId == R.id.navigation_home) return true;
+                else if (itemId == R.id.navigation_search) {
+                    if (searchEditText != null) searchEditText.requestFocus();
+                    return true;
+                } else if (itemId == R.id.navigation_add) {
+                    startActivity(new Intent(this, AddCarActivity.class));
+                    return true;
+                } else if (itemId == R.id.navigation_favorites) {
+                    startActivity(new Intent(this, FavoritesActivity.class));
+                    return true;
+                } else if (itemId == R.id.navigation_profile) {
+                    startActivity(new Intent(this, ProfileActivity.class));
+                    return true;
+                }
+                return false;
             });
-        }
-
-        if (chipBrand != null) {
-            chipBrand.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                if (isChecked) showBrandFilter();
-                applyFilters();
-            });
-        }
-
-        if (chipYear != null) {
-            chipYear.setOnCheckedChangeListener((buttonView, isChecked) -> applyFilters());
-        }
-
-        if (chipMileage != null) {
-            chipMileage.setOnCheckedChangeListener((buttonView, isChecked) -> applyFilters());
+            bottomNavigationView.setSelectedItemId(R.id.navigation_home);
         }
     }
 
@@ -188,54 +188,368 @@ public class MainActivity extends AppCompatActivity {
         if (navigationView != null) {
             navigationView.setNavigationItemSelectedListener(item -> {
                 int itemId = item.getItemId();
-
-                if (itemId == R.id.nav_profile) {
-                    startActivity(new Intent(MainActivity.this, ProfileActivity.class));
-                } else if (itemId == R.id.nav_history) {
-                    startActivity(new Intent(MainActivity.this, ViewHistoryActivity.class));
-                } else if (itemId == R.id.nav_favorites) {
-                    startActivity(new Intent(MainActivity.this, FavoritesActivity.class));
-                } else if (itemId == R.id.nav_share) {
-                    shareApp();
-                } else if (itemId == R.id.nav_logout) {
-                    logout();
-                }
-
-                if (drawerLayout != null) {
-                    drawerLayout.closeDrawer(navigationView);
-                }
+                if (itemId == R.id.nav_profile) startActivity(new Intent(this, ProfileActivity.class));
+                else if (itemId == R.id.nav_history) startActivity(new Intent(this, ViewHistoryActivity.class));
+                else if (itemId == R.id.nav_favorites) startActivity(new Intent(this, FavoritesActivity.class));
+                else if (itemId == R.id.nav_share) shareApp();
+                else if (itemId == R.id.nav_logout) logout();
+                if (drawerLayout != null) drawerLayout.closeDrawer(navigationView);
                 return true;
             });
         }
     }
 
-    private void setupBottomNavigation() {
-        if (bottomNavigationView != null) {
-            bottomNavigationView.setOnItemSelectedListener(item -> {
-                int itemId = item.getItemId();
+    // ========== BRAND BOTTOM SHEET ==========
+    private void showBrandBottomSheet() {
+        BottomSheetDialog dialog = new BottomSheetDialog(this);
+        View view = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_brand, null);
 
-                if (itemId == R.id.navigation_home) {
-                    return true;
-                } else if (itemId == R.id.navigation_search) {
-                    if (searchEditText != null) {
-                        searchEditText.requestFocus();
-                    }
-                    return true;
-                } else if (itemId == R.id.navigation_add) {
-                    startActivity(new Intent(MainActivity.this, AddCarActivity.class));
-                    return true;
-                } else if (itemId == R.id.navigation_favorites) {
-                    startActivity(new Intent(MainActivity.this, FavoritesActivity.class));
-                    return true;
-                } else if (itemId == R.id.navigation_profile) {
-                    startActivity(new Intent(MainActivity.this, ProfileActivity.class));
-                    return true;
-                }
-                return false;
-            });
+        EditText searchBrand = view.findViewById(R.id.searchBrandEditText);
+        RecyclerView popularRecycler = view.findViewById(R.id.popularBrandsRecycler);
+        RecyclerView allRecycler = view.findViewById(R.id.allBrandsRecycler);
 
-            bottomNavigationView.setSelectedItemId(R.id.navigation_home);
+        String[] popularBrands = {"BMW", "Mercedes-Benz", "Audi", "Toyota", "Kia",
+                "Hyundai", "Volkswagen", "Lada", "Renault", "Nissan"};
+
+        List<String> allBrandsList = BrandData.getAllBrands();
+
+        BrandAdapter popularAdapter = new BrandAdapter(popularBrands, brand -> {
+            selectedBrand = brand;
+            selectedModel = null;
+            chipBrand.setText(brand);
+            chipBrand.setChipBackgroundColorResource(R.color.red_light);
+            chipModel.setText("Модель ▾");
+            chipModel.setChipBackgroundColorResource(android.R.color.transparent);
+            dialog.dismiss();
+            applyFilters();
+        });
+
+        BrandAdapter allAdapter = new BrandAdapter(allBrandsList.toArray(new String[0]), brand -> {
+            selectedBrand = brand;
+            selectedModel = null;
+            chipBrand.setText(brand);
+            chipBrand.setChipBackgroundColorResource(R.color.red_light);
+            chipModel.setText("Модель ▾");
+            chipModel.setChipBackgroundColorResource(android.R.color.transparent);
+            dialog.dismiss();
+            applyFilters();
+        });
+
+        if (popularRecycler != null) {
+            popularRecycler.setLayoutManager(new LinearLayoutManager(this));
+            popularRecycler.setAdapter(popularAdapter);
         }
+
+        if (allRecycler != null) {
+            allRecycler.setLayoutManager(new LinearLayoutManager(this));
+            allRecycler.setAdapter(allAdapter);
+        }
+
+        view.findViewById(R.id.resetBrandButton).setOnClickListener(v -> {
+            selectedBrand = null;
+            selectedModel = null;
+            chipBrand.setText("Марка ▾");
+            chipBrand.setChipBackgroundColorResource(android.R.color.transparent);
+            chipModel.setText("Модель ▾");
+            chipModel.setChipBackgroundColorResource(android.R.color.transparent);
+            dialog.dismiss();
+            applyFilters();
+        });
+
+        searchBrand.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                String searchText = s.toString().toLowerCase().trim();
+                List<String> filtered = new ArrayList<>();
+                for (String brand : allBrandsList) {
+                    if (brand.toLowerCase().contains(searchText)) {
+                        filtered.add(brand);
+                    }
+                }
+                allAdapter.updateData(filtered.toArray(new String[0]));
+            }
+            @Override public void afterTextChanged(Editable s) {}
+        });
+
+        dialog.setContentView(view);
+        dialog.show();
+    }
+
+    // ========== MODEL BOTTOM SHEET ==========
+    private void showModelBottomSheet() {
+        BottomSheetDialog dialog = new BottomSheetDialog(this);
+        View view = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_simple_list, null);
+
+        TextView title = view.findViewById(R.id.titleText);
+        RecyclerView recycler = view.findViewById(R.id.simpleRecycler);
+
+        if (selectedBrand != null) {
+            title.setText("Модели " + selectedBrand);
+        } else {
+            title.setText("Сначала выберите марку");
+        }
+
+        List<String> modelsList = new ArrayList<>();
+
+        if (selectedBrand != null) {
+            modelsList = BrandData.getModelsForBrand(selectedBrand);
+        }
+
+        if (modelsList.isEmpty()) {
+            for (Car car : allCars) {
+                if (car != null && car.getModel() != null && !car.getModel().isEmpty()) {
+                    if (selectedBrand == null || car.getBrand().equals(selectedBrand)) {
+                        if (!modelsList.contains(car.getModel())) {
+                            modelsList.add(car.getModel());
+                        }
+                    }
+                }
+            }
+            Collections.sort(modelsList);
+        }
+
+        modelsList.add(0, "Все модели");
+
+        SimpleListAdapter adapter = new SimpleListAdapter(modelsList, item -> {
+            if (item.equals("Все модели")) {
+                selectedModel = null;
+                chipModel.setText("Модель ▾");
+                chipModel.setChipBackgroundColorResource(android.R.color.transparent);
+            } else {
+                selectedModel = item;
+                chipModel.setText(item);
+                chipModel.setChipBackgroundColorResource(R.color.red_light);
+            }
+            dialog.dismiss();
+            applyFilters();
+        });
+
+        if (recycler != null) {
+            recycler.setLayoutManager(new LinearLayoutManager(this));
+            recycler.setAdapter(adapter);
+        }
+
+        dialog.setContentView(view);
+        dialog.show();
+    }
+
+    // ========== YEAR BOTTOM SHEET ==========
+    private void showYearBottomSheet() {
+        BottomSheetDialog dialog = new BottomSheetDialog(this);
+        View view = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_year, null);
+
+        RecyclerView fromRecycler = view.findViewById(R.id.yearFromRecycler);
+        RecyclerView toRecycler = view.findViewById(R.id.yearToRecycler);
+        Button applyButton = view.findViewById(R.id.applyYearButton);
+
+        int currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR);
+        String[] years = new String[currentYear - 1970 + 2];
+        years[0] = "Любой";
+        for (int i = 1; i < years.length; i++) {
+            years[i] = String.valueOf(currentYear - i + 1);
+        }
+
+        SimpleListAdapter fromAdapter = new SimpleListAdapter(
+                java.util.Arrays.asList(years),
+                year -> {
+                    if (year.equals("Любой")) selectedYearFrom = null;
+                    else selectedYearFrom = Integer.parseInt(year);
+                }
+        );
+
+        SimpleListAdapter toAdapter = new SimpleListAdapter(
+                java.util.Arrays.asList(years),
+                year -> {
+                    if (year.equals("Любой")) selectedYearTo = null;
+                    else selectedYearTo = Integer.parseInt(year);
+                }
+        );
+
+        if (fromRecycler != null) {
+            fromRecycler.setLayoutManager(new LinearLayoutManager(this));
+            fromRecycler.setAdapter(fromAdapter);
+        }
+        if (toRecycler != null) {
+            toRecycler.setLayoutManager(new LinearLayoutManager(this));
+            toRecycler.setAdapter(toAdapter);
+        }
+
+        if (applyButton != null) {
+            applyButton.setOnClickListener(v -> {
+                if (selectedYearFrom == null && selectedYearTo == null) {
+                    chipYear.setText("Год ▾");
+                    chipYear.setChipBackgroundColorResource(android.R.color.transparent);
+                } else if (selectedYearFrom != null && selectedYearTo != null) {
+                    chipYear.setText(selectedYearFrom + "–" + selectedYearTo);
+                    chipYear.setChipBackgroundColorResource(R.color.red_light);
+                } else if (selectedYearFrom != null) {
+                    chipYear.setText("от " + selectedYearFrom);
+                    chipYear.setChipBackgroundColorResource(R.color.red_light);
+                } else {
+                    chipYear.setText("до " + selectedYearTo);
+                    chipYear.setChipBackgroundColorResource(R.color.red_light);
+                }
+                dialog.dismiss();
+                applyFilters();
+            });
+        }
+
+        dialog.setContentView(view);
+        dialog.show();
+    }
+
+    // ========== PRICE BOTTOM SHEET ==========
+    private void showPriceBottomSheet() {
+        BottomSheetDialog dialog = new BottomSheetDialog(this);
+        View view = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_price, null);
+
+        EditText fromEdit = view.findViewById(R.id.priceFromEditText);
+        EditText toEdit = view.findViewById(R.id.priceToEditText);
+        SeekBar seekBar = view.findViewById(R.id.priceSeekBar);
+        Button applyButton = view.findViewById(R.id.applyPriceButton);
+
+        if (seekBar != null) {
+            seekBar.setMax(10000000);
+            seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                    if (toEdit != null) toEdit.setText(String.valueOf(progress));
+                }
+                @Override public void onStartTrackingTouch(SeekBar seekBar) {}
+                @Override public void onStopTrackingTouch(SeekBar seekBar) {}
+            });
+        }
+
+        if (applyButton != null) {
+            applyButton.setOnClickListener(v -> {
+                String fromStr = fromEdit != null ? fromEdit.getText().toString() : "";
+                String toStr = toEdit != null ? toEdit.getText().toString() : "";
+
+                selectedPriceFrom = fromStr.isEmpty() ? null : Double.parseDouble(fromStr);
+                selectedPriceTo = toStr.isEmpty() ? null : Double.parseDouble(toStr);
+
+                if (selectedPriceFrom == null && selectedPriceTo == null) {
+                    chipPrice.setText("Цена ▾");
+                    chipPrice.setChipBackgroundColorResource(android.R.color.transparent);
+                } else {
+                    String text = (selectedPriceFrom != null ? formatPrice(selectedPriceFrom) : "0")
+                            + " – " + (selectedPriceTo != null ? formatPrice(selectedPriceTo) : "∞");
+                    chipPrice.setText(text);
+                    chipPrice.setChipBackgroundColorResource(R.color.red_light);
+                }
+                dialog.dismiss();
+                applyFilters();
+            });
+        }
+
+        dialog.setContentView(view);
+        dialog.show();
+    }
+
+    // ========== MILEAGE BOTTOM SHEET ==========
+    private void showMileageBottomSheet() {
+        BottomSheetDialog dialog = new BottomSheetDialog(this);
+        View view = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_mileage, null);
+
+        RecyclerView recycler = view.findViewById(R.id.mileageRecycler);
+
+        String[] mileages = {
+                "Любой пробег",
+                "До 10 000 км", "10 000 – 50 000 км", "50 000 – 100 000 км",
+                "100 000 – 150 000 км", "150 000 – 200 000 км", "Свыше 200 000 км"
+        };
+
+        SimpleListAdapter adapter = new SimpleListAdapter(
+                java.util.Arrays.asList(mileages),
+                item -> {
+                    switch (item) {
+                        case "Любой пробег":
+                            selectedMileageFrom = null; selectedMileageTo = null; break;
+                        case "До 10 000 км":
+                            selectedMileageFrom = 0; selectedMileageTo = 10000; break;
+                        case "10 000 – 50 000 км":
+                            selectedMileageFrom = 10000; selectedMileageTo = 50000; break;
+                        case "50 000 – 100 000 км":
+                            selectedMileageFrom = 50000; selectedMileageTo = 100000; break;
+                        case "100 000 – 150 000 км":
+                            selectedMileageFrom = 100000; selectedMileageTo = 150000; break;
+                        case "150 000 – 200 000 км":
+                            selectedMileageFrom = 150000; selectedMileageTo = 200000; break;
+                        case "Свыше 200 000 км":
+                            selectedMileageFrom = 200000; selectedMileageTo = Integer.MAX_VALUE; break;
+                    }
+
+                    if (selectedMileageFrom == null) {
+                        chipMileage.setText("Пробег ▾");
+                        chipMileage.setChipBackgroundColorResource(android.R.color.transparent);
+                    } else {
+                        chipMileage.setText(item);
+                        chipMileage.setChipBackgroundColorResource(R.color.red_light);
+                    }
+                    dialog.dismiss();
+                    applyFilters();
+                }
+        );
+
+        if (recycler != null) {
+            recycler.setLayoutManager(new LinearLayoutManager(this));
+            recycler.setAdapter(adapter);
+        }
+
+        dialog.setContentView(view);
+        dialog.show();
+    }
+
+    private void showSortOptions() {
+        String[] options = {"По умолчанию", "Цена ↑", "Цена ↓", "Год ↑", "Год ↓", "Пробег ↑", "Пробег ↓"};
+
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Сортировка")
+                .setItems(options, (dialog, which) -> {
+                    switch (which) {
+                        case 0: loadCars(); break;
+                        case 1: Collections.sort(filteredCars, (a,b) -> Double.compare(a.getPrice(), b.getPrice())); break;
+                        case 2: Collections.sort(filteredCars, (a,b) -> Double.compare(b.getPrice(), a.getPrice())); break;
+                        case 3: Collections.sort(filteredCars, (a,b) -> Integer.compare(a.getYear(), b.getYear())); break;
+                        case 4: Collections.sort(filteredCars, (a,b) -> Integer.compare(b.getYear(), a.getYear())); break;
+                        case 5: Collections.sort(filteredCars, (a,b) -> Integer.compare(a.getMileage(), b.getMileage())); break;
+                        case 6: Collections.sort(filteredCars, (a,b) -> Integer.compare(b.getMileage(), a.getMileage())); break;
+                    }
+                    if (carAdapter != null) carAdapter.updateList(new ArrayList<>(filteredCars));
+                }).show();
+    }
+
+    private String formatPrice(double price) {
+        if (price >= 1000000) return String.format("%.1f млн", price / 1000000);
+        if (price >= 1000) return String.format("%.0f тыс", price / 1000);
+        return String.format("%.0f", price);
+    }
+
+    private void applyFilters() {
+        if (allCars == null) { filteredCars.clear(); updateUI(); return; }
+
+        filteredCars.clear();
+        String searchText = searchEditText != null ?
+                searchEditText.getText().toString().trim().toLowerCase() : "";
+
+        for (Car car : allCars) {
+            if (car == null) continue;
+
+            boolean matches = searchText.isEmpty() ||
+                    car.getFullName().toLowerCase().contains(searchText) ||
+                    String.valueOf((int)car.getPrice()).contains(searchText);
+
+            if (selectedBrand != null && !car.getBrand().equalsIgnoreCase(selectedBrand)) matches = false;
+            if (selectedModel != null && !car.getModel().equalsIgnoreCase(selectedModel)) matches = false;
+            if (selectedYearFrom != null && car.getYear() < selectedYearFrom) matches = false;
+            if (selectedYearTo != null && car.getYear() > selectedYearTo) matches = false;
+            if (selectedPriceFrom != null && car.getPrice() < selectedPriceFrom) matches = false;
+            if (selectedPriceTo != null && car.getPrice() > selectedPriceTo) matches = false;
+            if (selectedMileageFrom != null && car.getMileage() < selectedMileageFrom) matches = false;
+            if (selectedMileageTo != null && car.getMileage() > selectedMileageTo) matches = false;
+
+            if (matches) filteredCars.add(car);
+        }
+        updateUI();
     }
 
     private void loadCars() {
@@ -243,9 +557,7 @@ public class MainActivity extends AppCompatActivity {
         allCars.clear();
 
         List<Car> localCars = LocalCarManager.loadCars();
-        if (localCars != null && !localCars.isEmpty()) {
-            allCars.addAll(localCars);
-        }
+        if (localCars != null && !localCars.isEmpty()) allCars.addAll(localCars);
 
         db.collection("cars")
                 .orderBy("createdAt", Query.Direction.DESCENDING)
@@ -254,22 +566,17 @@ public class MainActivity extends AppCompatActivity {
                     if (task.isSuccessful() && task.getResult() != null) {
                         for (DocumentSnapshot doc : task.getResult()) {
                             Car car = documentToCar(doc);
-                            if (car != null && !containsCar(allCars, car)) {
-                                allCars.add(car);
-                            }
+                            if (car != null && !containsCar(allCars, car)) allCars.add(car);
                         }
                     }
-
                     Favorites.syncWithLoadedCars(allCars);
                     applyFilters();
                     showLoading(false);
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error loading cars", e);
                     applyFilters();
                     showLoading(false);
-                    Toast.makeText(MainActivity.this,
-                            "Ошибка загрузки данных", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Ошибка загрузки", Toast.LENGTH_SHORT).show();
                 });
     }
 
@@ -279,232 +586,78 @@ public class MainActivity extends AppCompatActivity {
             UserManager.loadUserFromFirebase(firebaseUser, user -> {
                 if (user != null) {
                     updateNavigationHeader(user);
+                } else {
+                    View header = navigationView.getHeaderView(0);
+                    if (header != null) {
+                        TextView name = header.findViewById(R.id.userNameText);
+                        TextView email = header.findViewById(R.id.userEmailText);
+                        if (name != null) name.setText("Пользователь");
+                        if (email != null && firebaseUser.getEmail() != null)
+                            email.setText(firebaseUser.getEmail());
+                    }
                 }
             });
         }
     }
 
     private void updateNavigationHeader(User user) {
-        if (navigationView == null) return;
+        if (navigationView == null || user == null) return;
 
-        View headerView = navigationView.getHeaderView(0);
-        if (headerView == null) return;
+        View header = navigationView.getHeaderView(0);
+        if (header == null) return;
 
-        TextView userNameText = headerView.findViewById(R.id.userNameText);
-        TextView userEmailText = headerView.findViewById(R.id.userEmailText);
+        TextView name = header.findViewById(R.id.userNameText);
+        TextView email = header.findViewById(R.id.userEmailText);
 
-        if (userNameText != null) {
-            userNameText.setText(user.getFullName());
+        if (name != null) {
+            String fullName = user.getFullName();
+            name.setText(fullName != null && !fullName.isEmpty() ? fullName : "Пользователь");
         }
-        if (userEmailText != null) {
-            userEmailText.setText(user.getEmail());
+        if (email != null) {
+            String userEmail = user.getEmail();
+            email.setText(userEmail != null ? userEmail : "");
         }
-    }
-
-    private void applyFilters() {
-        if (allCars == null) {
-            filteredCars.clear();
-            updateUI();
-            return;
-        }
-
-        filteredCars.clear();
-
-        String searchText = "";
-        if (searchEditText != null) {
-            searchText = searchEditText.getText().toString().trim().toLowerCase();
-        }
-
-        for (Car car : allCars) {
-            if (car == null) continue;
-
-            boolean matchesSearch = searchText.isEmpty() ||
-                    (car.getBrand() != null && car.getBrand().toLowerCase().contains(searchText)) ||
-                    (car.getModel() != null && car.getModel().toLowerCase().contains(searchText)) ||
-                    (String.valueOf(car.getPrice()).contains(searchText));
-
-            if (matchesSearch) {
-                filteredCars.add(car);
-            }
-        }
-
-        updateUI();
     }
 
     private void updateUI() {
-        if (carAdapter != null) {
-            carAdapter.updateList(new ArrayList<>(filteredCars));
-        }
+        if (carAdapter != null) carAdapter.updateList(new ArrayList<>(filteredCars));
+        if (countText != null) countText.setText("Найдено " + filteredCars.size() + " авто");
 
-        if (countText != null) {
-            int count = filteredCars != null ? filteredCars.size() : 0;
-            countText.setText("Найдено " + count + " авто");
-        }
-
-        if (filteredCars == null || filteredCars.isEmpty()) {
-            if (emptyState != null) emptyState.setVisibility(View.VISIBLE);
-            if (carsRecyclerView != null) carsRecyclerView.setVisibility(View.GONE);
-        } else {
-            if (emptyState != null) emptyState.setVisibility(View.GONE);
-            if (carsRecyclerView != null) carsRecyclerView.setVisibility(View.VISIBLE);
-        }
+        boolean isEmpty = filteredCars.isEmpty();
+        if (emptyState != null) emptyState.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
+        if (carsRecyclerView != null) carsRecyclerView.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
     }
 
     private void showLoading(boolean show) {
-        if (loadingState != null) {
-            loadingState.setVisibility(show ? View.VISIBLE : View.GONE);
-        }
-        if (carsRecyclerView != null && show) {
-            carsRecyclerView.setVisibility(View.GONE);
-        }
-        if (emptyState != null && show) {
-            emptyState.setVisibility(View.GONE);
-        }
-    }
-
-    private void showSortOptions() {
-        String[] options = {"По умолчанию", "Цена (возрастание)", "Цена (убывание)",
-                "Год (новые)", "Год (старые)", "Пробег (мин)", "Пробег (макс)"};
-
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Сортировка")
-                .setItems(options, (dialog, which) -> {
-                    switch (which) {
-                        case 0:
-                            loadCars();
-                            break;
-                        case 1:
-                            Collections.sort(filteredCars, (c1, c2) ->
-                                    Double.compare(c1.getPrice(), c2.getPrice()));
-                            break;
-                        case 2:
-                            Collections.sort(filteredCars, (c1, c2) ->
-                                    Double.compare(c2.getPrice(), c1.getPrice()));
-                            break;
-                        case 3:
-                            Collections.sort(filteredCars, (c1, c2) ->
-                                    Integer.compare(c2.getYear(), c1.getYear()));
-                            break;
-                        case 4:
-                            Collections.sort(filteredCars, (c1, c2) ->
-                                    Integer.compare(c1.getYear(), c2.getYear()));
-                            break;
-                        case 5:
-                            Collections.sort(filteredCars, (c1, c2) ->
-                                    Integer.compare(c1.getMileage(), c2.getMileage()));
-                            break;
-                        case 6:
-                            Collections.sort(filteredCars, (c1, c2) ->
-                                    Integer.compare(c2.getMileage(), c1.getMileage()));
-                            break;
-                    }
-
-                    if (carAdapter != null) {
-                        carAdapter.updateList(new ArrayList<>(filteredCars));
-                    }
-
-                    TextView sortButton = findViewById(R.id.sortButton);
-                    if (sortButton != null && which > 0) {
-                        sortButton.setText(options[which]);
-                    }
-                })
-                .show();
-    }
-
-    private void showPriceFilter() {
-        String[] priceRanges = {
-                "Любая цена",
-                "До 500 000 ₽",
-                "500 000 - 1 000 000 ₽",
-                "1 000 000 - 2 000 000 ₽",
-                "2 000 000 - 5 000 000 ₽",
-                "Свыше 5 000 000 ₽"
-        };
-
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Выберите цену")
-                .setItems(priceRanges, (dialog, which) -> {
-                    if (which > 0) {
-                        chipPrice.setText(priceRanges[which]);
-                        chipPrice.setChecked(true);
-                    } else {
-                        chipPrice.setChecked(false);
-                        chipPrice.setText("Цена");
-                    }
-                    applyFilters();
-                })
-                .show();
-    }
-
-    private void showBrandFilter() {
-        Set<String> brands = new HashSet<>();
-        for (Car car : allCars) {
-            if (car != null && car.getBrand() != null && !car.getBrand().isEmpty()) {
-                brands.add(car.getBrand());
-            }
-        }
-
-        List<String> brandList = new ArrayList<>(brands);
-        Collections.sort(brandList);
-        brandList.add(0, "Все марки");
-
-        String[] brandArray = brandList.toArray(new String[0]);
-
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Выберите марку")
-                .setItems(brandArray, (dialog, which) -> {
-                    if (which > 0) {
-                        chipBrand.setText(brandArray[which]);
-                        chipBrand.setChecked(true);
-                    } else {
-                        chipBrand.setChecked(false);
-                        chipBrand.setText("Марка");
-                    }
-                    applyFilters();
-                })
-                .show();
+        if (loadingState != null) loadingState.setVisibility(show ? View.VISIBLE : View.GONE);
+        if (carsRecyclerView != null && show) carsRecyclerView.setVisibility(View.GONE);
+        if (emptyState != null && show) emptyState.setVisibility(View.GONE);
     }
 
     @SuppressWarnings("unchecked")
     private Car documentToCar(DocumentSnapshot doc) {
         try {
             if (doc == null || !doc.exists()) return null;
-
             Car car = new Car();
             car.setId(doc.getId());
             car.setBrand(doc.getString("brand"));
             car.setModel(doc.getString("model"));
 
-            Long yearLong = doc.getLong("year");
-            if (yearLong != null) car.setYear(yearLong.intValue());
-
-            Long mileageLong = doc.getLong("mileage");
-            if (mileageLong != null) car.setMileage(mileageLong.intValue());
-
-            Double engineDouble = doc.getDouble("engineVolume");
-            if (engineDouble != null) car.setEngineVolume(engineDouble);
-
-            Double priceDouble = doc.getDouble("price");
-            if (priceDouble != null) {
-                car.setPrice(priceDouble);
-            } else {
-                Long priceLong = doc.getLong("price");
-                if (priceLong != null) car.setPrice(priceLong.doubleValue());
-            }
+            Long y = doc.getLong("year"); if (y != null) car.setYear(y.intValue());
+            Long m = doc.getLong("mileage"); if (m != null) car.setMileage(m.intValue());
+            Double e = doc.getDouble("engineVolume"); if (e != null) car.setEngineVolume(e);
+            Double p = doc.getDouble("price");
+            if (p != null) car.setPrice(p);
+            else { Long pl = doc.getLong("price"); if (pl != null) car.setPrice(pl.doubleValue()); }
 
             car.setDescription(doc.getString("description"));
             car.setOwnerId(doc.getString("ownerId"));
 
-            List<String> imageUrls = (List<String>) doc.get("imageUrls");
-            if (imageUrls != null) {
-                car.setImageUrls(new ArrayList<>(imageUrls));
-            }
+            List<String> images = (List<String>) doc.get("imageUrls");
+            if (images != null) car.setImageUrls(new ArrayList<>(images));
 
-            Date createdAt = doc.getDate("createdAt");
-            if (createdAt != null) car.setCreatedAt(createdAt);
-
+            Date d = doc.getDate("createdAt"); if (d != null) car.setCreatedAt(d);
             car.setFavorite(Favorites.isFavorite(car));
-
             return car;
         } catch (Exception e) {
             Log.e(TAG, "Error converting document", e);
@@ -512,33 +665,30 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private boolean containsCar(List<Car> cars, Car targetCar) {
-        if (targetCar == null || targetCar.getId() == null) return false;
-        for (Car car : cars) {
-            if (car != null && targetCar.getId().equals(car.getId())) {
-                return true;
-            }
+    private boolean containsCar(List<Car> cars, Car target) {
+        if (target == null || target.getId() == null) return false;
+        for (Car c : cars) {
+            if (c != null && target.getId().equals(c.getId())) return true;
         }
         return false;
     }
 
     private void shareApp() {
-        Intent shareIntent = new Intent(Intent.ACTION_SEND);
-        shareIntent.setType("text/plain");
-        shareIntent.putExtra(Intent.EXTRA_SUBJECT, "SwagBuyCar");
-        shareIntent.putExtra(Intent.EXTRA_TEXT,
-                "Скачайте приложение SwagBuyCar для покупки и продажи автомобилей!");
-        startActivity(Intent.createChooser(shareIntent, "Поделиться"));
+        Intent i = new Intent(Intent.ACTION_SEND);
+        i.setType("text/plain");
+        i.putExtra(Intent.EXTRA_SUBJECT, "КупиКолёса");
+        i.putExtra(Intent.EXTRA_TEXT, "Скачайте КупиКолёса для покупки авто!");
+        startActivity(Intent.createChooser(i, "Поделиться"));
     }
 
     private void logout() {
         new androidx.appcompat.app.AlertDialog.Builder(this)
                 .setTitle("Выход")
-                .setMessage("Вы уверены, что хотите выйти?")
-                .setPositiveButton("Выйти", (dialog, which) -> {
+                .setMessage("Вы уверены?")
+                .setPositiveButton("Выйти", (d, w) -> {
                     mAuth.signOut();
                     UserManager.logout();
-                    startActivity(new Intent(MainActivity.this, LoginActivity.class));
+                    startActivity(new Intent(this, LoginActivity.class));
                     finishAffinity();
                 })
                 .setNegativeButton("Отмена", null)
@@ -550,8 +700,94 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         loadCars();
         loadUserData();
-        if (bottomNavigationView != null) {
+        if (bottomNavigationView != null)
             bottomNavigationView.setSelectedItemId(R.id.navigation_home);
+    }
+
+    // ========== ВНУТРЕННИЕ АДАПТЕРЫ ==========
+
+    class BrandAdapter extends RecyclerView.Adapter<BrandAdapter.ViewHolder> {
+        private String[] items;
+        private OnItemClickListener listener;
+
+        interface OnItemClickListener {
+            void onClick(String item);
+        }
+
+        BrandAdapter(String[] items, OnItemClickListener listener) {
+            this.items = items;
+            this.listener = listener;
+        }
+
+        void updateData(String[] newItems) {
+            this.items = newItems;
+            notifyDataSetChanged();
+        }
+
+        @Override
+        public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+            View v = LayoutInflater.from(parent.getContext())
+                    .inflate(android.R.layout.simple_list_item_1, parent, false);
+            return new ViewHolder(v);
+        }
+
+        @Override
+        public void onBindViewHolder(ViewHolder holder, int pos) {
+            holder.text.setText(items[pos]);
+            holder.itemView.setOnClickListener(v -> listener.onClick(items[pos]));
+        }
+
+        @Override
+        public int getItemCount() {
+            return items != null ? items.length : 0;
+        }
+
+        class ViewHolder extends RecyclerView.ViewHolder {
+            TextView text;
+            ViewHolder(View v) {
+                super(v);
+                text = v.findViewById(android.R.id.text1);
+            }
+        }
+    }
+
+    class SimpleListAdapter extends RecyclerView.Adapter<SimpleListAdapter.VH> {
+        private List<String> items;
+        private OnItemClick listener;
+
+        interface OnItemClick {
+            void onClick(String item);
+        }
+
+        SimpleListAdapter(List<String> items, OnItemClick listener) {
+            this.items = items;
+            this.listener = listener;
+        }
+
+        @Override
+        public VH onCreateViewHolder(ViewGroup p, int t) {
+            View v = LayoutInflater.from(p.getContext())
+                    .inflate(android.R.layout.simple_list_item_1, p, false);
+            return new VH(v);
+        }
+
+        @Override
+        public void onBindViewHolder(VH h, int pos) {
+            h.text.setText(items.get(pos));
+            h.itemView.setOnClickListener(v -> listener.onClick(items.get(pos)));
+        }
+
+        @Override
+        public int getItemCount() {
+            return items != null ? items.size() : 0;
+        }
+
+        class VH extends RecyclerView.ViewHolder {
+            TextView text;
+            VH(View v) {
+                super(v);
+                text = v.findViewById(android.R.id.text1);
+            }
         }
     }
 }
