@@ -5,11 +5,9 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ProgressBar;
-import android.widget.Switch;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -23,11 +21,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class RegisterActivity extends AppCompatActivity {
+    private static final String TAG = "RegisterActivity";
+
     private EditText emailEditText, passwordEditText, confirmPasswordEditText;
     private EditText firstNameEditText, lastNameEditText, middleNameEditText;
     private Button registerButton;
     private ImageButton backButton;
-    private Switch musicToggle;
     private ProgressBar progressBar;
     private FirebaseAuth mAuth;
 
@@ -37,10 +36,7 @@ public class RegisterActivity extends AppCompatActivity {
         setContentView(R.layout.activity_register);
 
         mAuth = FirebaseAuth.getInstance();
-        UserManager.init(this);
-
         initViews();
-        setupMusicToggle();
     }
 
     private void initViews() {
@@ -52,41 +48,34 @@ public class RegisterActivity extends AppCompatActivity {
         middleNameEditText = findViewById(R.id.middleNameEditText);
         registerButton = findViewById(R.id.registerButton);
         backButton = findViewById(R.id.backButton);
-
         progressBar = findViewById(R.id.progressBar);
 
-        registerButton.setOnClickListener(v -> registerUser());
-        backButton.setOnClickListener(v -> onBackPressed());
-    }
+        if (registerButton != null) {
+            registerButton.setOnClickListener(v -> registerUser());
+        }
 
-    private void setupMusicToggle() {
-        musicToggle.setChecked(MusicManager.isMusicPlaying());
-
-        musicToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (isChecked) {
-                    MusicManager.playMusic(RegisterActivity.this);
-                    Toast.makeText(RegisterActivity.this, "Swag музыка включена! 🎵", Toast.LENGTH_SHORT).show();
-                } else {
-                    MusicManager.stopMusic();
-                    Toast.makeText(RegisterActivity.this, "Swag музыка выключена", Toast.LENGTH_SHORT).show();
-                }
-            }
-        });
+        if (backButton != null) {
+            backButton.setOnClickListener(v -> finish());
+        }
     }
 
     private void registerUser() {
-        String email = emailEditText.getText().toString().trim();
-        String password = passwordEditText.getText().toString().trim();
-        String confirmPassword = confirmPasswordEditText.getText().toString().trim();
-        String firstName = firstNameEditText.getText().toString().trim();
-        String lastName = lastNameEditText.getText().toString().trim();
-        String middleName = middleNameEditText.getText().toString().trim();
+        String email = getTextFromEditText(emailEditText);
+        String password = getTextFromEditText(passwordEditText);
+        String confirmPassword = getTextFromEditText(confirmPasswordEditText);
+        String firstName = getTextFromEditText(firstNameEditText);
+        String lastName = getTextFromEditText(lastNameEditText);
+        String middleName = getTextFromEditText(middleNameEditText);
 
+        // Валидация
         if (email.isEmpty() || password.isEmpty() || confirmPassword.isEmpty() ||
                 firstName.isEmpty() || lastName.isEmpty()) {
             Toast.makeText(this, "Заполните все обязательные поля", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            Toast.makeText(this, "Введите корректный email", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -100,18 +89,27 @@ public class RegisterActivity extends AppCompatActivity {
             return;
         }
 
-        progressBar.setVisibility(View.VISIBLE);
-        registerButton.setEnabled(false);
+        // Показываем прогресс
+        if (progressBar != null) {
+            progressBar.setVisibility(View.VISIBLE);
+        }
+        if (registerButton != null) {
+            registerButton.setEnabled(false);
+        }
 
         mAuth.createUserWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, task -> {
-                    progressBar.setVisibility(View.GONE);
-                    registerButton.setEnabled(true);
+                    if (progressBar != null) {
+                        progressBar.setVisibility(View.GONE);
+                    }
+                    if (registerButton != null) {
+                        registerButton.setEnabled(true);
+                    }
 
                     if (task.isSuccessful()) {
                         FirebaseUser firebaseUser = mAuth.getCurrentUser();
                         if (firebaseUser != null) {
-                            // Создаем объект пользователя
+                            // Создаем пользователя
                             User user = new User();
                             user.setId(firebaseUser.getUid());
                             user.setEmail(email);
@@ -123,18 +121,27 @@ public class RegisterActivity extends AppCompatActivity {
                             UserManager.setCurrentUser(user);
                             saveUserToFirestore(user);
 
-                            Toast.makeText(RegisterActivity.this, "Регистрация успешна!", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(RegisterActivity.this,
+                                    "Регистрация успешна!", Toast.LENGTH_SHORT).show();
+
                             startActivity(new Intent(this, MainActivity.class));
-                            finish();
+                            finishAffinity();
                         }
                     } else {
                         String errorMessage = "Ошибка регистрации";
                         if (task.getException() != null) {
-                            errorMessage += ": " + task.getException().getMessage();
+                            String message = task.getException().getMessage();
+                            if (message != null) {
+                                errorMessage = message;
+                            }
                         }
                         Toast.makeText(RegisterActivity.this, errorMessage, Toast.LENGTH_LONG).show();
                     }
                 });
+    }
+
+    private String getTextFromEditText(EditText editText) {
+        return editText != null ? editText.getText().toString().trim() : "";
     }
 
     private void saveUserToFirestore(User user) {
@@ -147,22 +154,13 @@ public class RegisterActivity extends AppCompatActivity {
         userData.put("phoneNumber", "");
         userData.put("createdAt", new Date());
 
-        FirebaseFirestore.getInstance().collection("users")
+        FirebaseFirestore.getInstance()
+                .collection("users")
                 .document(user.getId())
                 .set(userData)
-                .addOnSuccessListener(aVoid -> {
-                    Log.d("RegisterActivity", "User saved to Firestore");
-                })
-                .addOnFailureListener(e -> {
-                    Log.e("RegisterActivity", "Error saving user to Firestore", e);
-                });
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        if (musicToggle != null) {
-            musicToggle.setChecked(MusicManager.isMusicPlaying());
-        }
+                .addOnSuccessListener(aVoid ->
+                        Log.d(TAG, "User saved to Firestore"))
+                .addOnFailureListener(e ->
+                        Log.e(TAG, "Error saving user to Firestore", e));
     }
 }

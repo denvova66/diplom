@@ -21,18 +21,24 @@ public class Car implements Serializable {
     private boolean isLocal;
 
     public Car() {
+        this.id = "";
+        this.brand = "";
+        this.model = "";
         this.imageUrls = new ArrayList<>();
         this.createdAt = new Date();
         this.isLocal = false;
+        this.description = "";
+        this.ownerId = "";
     }
 
-    public String getId() { return id; }
+    // Геттеры и сеттеры
+    public String getId() { return id != null ? id : ""; }
     public void setId(String id) { this.id = id; }
 
-    public String getBrand() { return brand; }
+    public String getBrand() { return brand != null ? brand : ""; }
     public void setBrand(String brand) { this.brand = brand; }
 
-    public String getModel() { return model; }
+    public String getModel() { return model != null ? model : ""; }
     public void setModel(String model) { this.model = model; }
 
     public int getYear() { return year; }
@@ -47,17 +53,26 @@ public class Car implements Serializable {
     public double getPrice() { return price; }
     public void setPrice(double price) { this.price = price; }
 
-    public String getDescription() { return description; }
+    public String getDescription() { return description != null ? description : ""; }
     public void setDescription(String description) { this.description = description; }
 
-    public String getOwnerId() { return ownerId; }
+    public String getOwnerId() { return ownerId != null ? ownerId : ""; }
     public void setOwnerId(String ownerId) { this.ownerId = ownerId; }
 
-    public List<String> getImageUrls() { return imageUrls; }
-    public void setImageUrls(List<String> imageUrls) { this.imageUrls = imageUrls; }
+    public List<String> getImageUrls() {
+        if (imageUrls == null) imageUrls = new ArrayList<>();
+        return imageUrls;
+    }
+
+    public void setImageUrls(List<String> imageUrls) {
+        this.imageUrls = imageUrls != null ? imageUrls : new ArrayList<>();
+    }
 
     public String getImageUrl() {
-        return (imageUrls != null && !imageUrls.isEmpty()) ? imageUrls.get(0) : null;
+        if (imageUrls != null && !imageUrls.isEmpty()) {
+            return imageUrls.get(0);
+        }
+        return "";
     }
 
     public void setImageUrl(String imageUrl) {
@@ -66,10 +81,15 @@ public class Car implements Serializable {
         } else {
             this.imageUrls.clear();
         }
-        this.imageUrls.add(imageUrl);
+        if (imageUrl != null && !imageUrl.isEmpty()) {
+            this.imageUrls.add(imageUrl);
+        }
     }
 
-    public Date getCreatedAt() { return createdAt; }
+    public Date getCreatedAt() {
+        if (createdAt == null) createdAt = new Date();
+        return createdAt;
+    }
     public void setCreatedAt(Date createdAt) { this.createdAt = createdAt; }
 
     public boolean isFavorite() { return isFavorite; }
@@ -78,9 +98,13 @@ public class Car implements Serializable {
     public boolean isLocal() { return isLocal; }
     public void setLocal(boolean local) { isLocal = local; }
 
-    // Метод для получения полного названия автомобиля
     public String getFullName() {
-        return brand + " " + model;
+        String brandStr = getBrand();
+        String modelStr = getModel();
+        if (brandStr.isEmpty() && modelStr.isEmpty()) return "";
+        if (brandStr.isEmpty()) return modelStr;
+        if (modelStr.isEmpty()) return brandStr;
+        return brandStr + " " + modelStr;
     }
 
     @Override
@@ -88,11 +112,11 @@ public class Car implements Serializable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Car car = (Car) o;
-        return id != null ? id.equals(car.id) : car.id == null;
+        return getId().equals(car.getId());
     }
 
     @Override
     public int hashCode() {
-        return id != null ? id.hashCode() : 0;
+        return getId().hashCode();
     }
 }

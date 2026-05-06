@@ -4,6 +4,9 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Log;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -17,7 +20,7 @@ public class Favorites {
     private static final String TAG = "Favorites";
 
     public static void init(Context context) {
-        if (prefs == null) {
+        if (prefs == null && context != null) {
             prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
             loadFavorites();
         }
@@ -28,92 +31,132 @@ public class Favorites {
     }
 
     public static void addFavoriteCar(Car car) {
-        if (!containsCar(car)) {
-            favoriteCars.add(car);
+        if (car == null || car.getId() == null || car.getId().isEmpty()) return;
+
+        if (!isFavorite(car)) {
+            favoriteCars.add(0, car);
             saveFavorites();
-            Log.d(TAG, "Car added to favorites: " + car.getId());
         }
     }
 
     public static void removeFavoriteCar(Car car) {
-        Car carToRemove = findCarById(car.getId());
-        if (carToRemove != null) {
-            favoriteCars.remove(carToRemove);
-            saveFavorites();
-            Log.d(TAG, "Car removed from favorites: " + car.getId());
-        }
+        if (car == null || car.getId() == null) return;
+
+        favoriteCars.removeIf(c -> car.getId().equals(c.getId()));
+        saveFavorites();
     }
 
     public static boolean isFavorite(Car car) {
-        return findCarById(car.getId()) != null;
-    }
+        if (car == null || car.getId() == null) return false;
 
-    private static boolean containsCar(Car car) {
-        return findCarById(car.getId()) != null;
-    }
-
-    private static Car findCarById(String id) {
-        if (id == null) return null;
-
-        for (Car car : favoriteCars) {
-            if (car.getId() != null && car.getId().equals(id)) {
-                return car;
+        for (Car favCar : favoriteCars) {
+            if (car.getId().equals(favCar.getId())) {
+                return true;
             }
         }
-        return null;
+        return false;
     }
 
     private static void saveFavorites() {
-        Set<String> favoriteIds = new HashSet<>();
-        for (Car car : favoriteCars) {
-            if (car.getId() != null) {
-                favoriteIds.add(car.getId());
+        if (prefs == null) return;
+
+        try {
+            JSONArray jsonArray = new JSONArray();
+            for (Car car : favoriteCars) {
+                if (car != null && car.getId() != null) {
+                    JSONObject carJson = new JSONObject();
+                    carJson.put("id", car.getId());
+                    carJson.put("brand", car.getBrand());
+                    carJson.put("model", car.getModel());
+                    carJson.put("year", car.getYear());
+                    carJson.put("mileage", car.getMileage());
+                    carJson.put("engineVolume", car.getEngineVolume());
+                    carJson.put("price", car.getPrice());
+                    carJson.put("description", car.getDescription());
+                    carJson.put("ownerId", car.getOwnerId());
+                    carJson.put("isLocal", car.isLocal());
+
+                    if (car.getImageUrl() != null) {
+                        carJson.put("imageUrl", car.getImageUrl());
+                    }
+
+                    if (car.getImageUrls() != null && !car.getImageUrls().isEmpty()) {
+                        JSONArray imagesArray = new JSONArray();
+                        for (String url : car.getImageUrls()) {
+                            if (url != null) {
+                                imagesArray.put(url);
+                            }
+                        }
+                        carJson.put("imageUrls", imagesArray);
+                    }
+
+                    jsonArray.put(carJson);
+                }
             }
+
+            prefs.edit().putString(FAVORITES_KEY, jsonArray.toString()).apply();
+        } catch (Exception e) {
+            Log.e(TAG, "Error saving favorites", e);
         }
-        prefs.edit().putStringSet(FAVORITES_KEY, favoriteIds).apply();
-        Log.d(TAG, "Favorites saved: " + favoriteIds.size() + " cars");
     }
 
     private static void loadFavorites() {
+        if (prefs == null) return;
+        favoriteCars.clear();
+
         try {
-            Set<String> favoriteIds = prefs.getStringSet(FAVORITES_KEY, new HashSet<>());
+            String jsonString = prefs.getString(FAVORITES_KEY, "[]");
+            JSONArray jsonArray = new JSONArray(jsonString);
 
-            if (favoriteIds == null) {
-                favoriteIds = new HashSet<>();
-            }
-
-            favoriteCars.clear();
-            for (String id : favoriteIds) {
+            for (int i = 0; i < jsonArray.length(); i++) {
+                JSONObject carJson = jsonArray.getJSONObject(i);
                 Car car = new Car();
-                car.setId(id);
+
+                car.setId(carJson.optString("id", ""));
+                car.setBrand(carJson.optString("brand", ""));
+                car.setModel(carJson.optString("model", ""));
+                car.setYear(carJson.optInt("year", 0));
+                car.setMileage(carJson.optInt("mileage", 0));
+                car.setEngineVolume(carJson.optDouble("engineVolume", 0));
+                car.setPrice(carJson.optDouble("price", 0));
+                car.setDescription(carJson.optString("description", ""));
+                car.setOwnerId(carJson.optString("ownerId", ""));
+                car.setLocal(carJson.optBoolean("isLocal", false));
+                car.setFavorite(true);
+
+                // Загружаем URL изображений
+                String imageUrl = carJson.optString("imageUrl", "");
+                if (!imageUrl.isEmpty()) {
+                    car.setImageUrl(imageUrl);
+                }
+
+                JSONArray imagesArray = carJson.optJSONArray("imageUrls");
+                if (imagesArray != null && imagesArray.length() > 0) {
+                    List<String> imageUrls = new ArrayList<>();
+                    for (int j = 0; j < imagesArray.length(); j++) {
+                        imageUrls.add(imagesArray.optString(j, ""));
+                    }
+                    car.setImageUrls(imageUrls);
+                }
+
                 favoriteCars.add(car);
             }
-            Log.d(TAG, "Favorites loaded: " + favoriteCars.size() + " cars");
         } catch (Exception e) {
             Log.e(TAG, "Error loading favorites", e);
-            prefs.edit().remove(FAVORITES_KEY).apply();
-            favoriteCars.clear();
+            if (prefs != null) {
+                prefs.edit().remove(FAVORITES_KEY).apply();
+            }
         }
     }
 
     public static void syncWithLoadedCars(List<Car> loadedCars) {
-        Set<String> favoriteIds = new HashSet<>();
-        try {
-            favoriteIds = prefs.getStringSet(FAVORITES_KEY, new HashSet<>());
-        } catch (Exception e) {
-            Log.e(TAG, "Error getting favorite IDs", e);
-            prefs.edit().remove(FAVORITES_KEY).apply();
-        }
+        if (loadedCars == null) return;
 
-        favoriteCars.clear();
-
-        for (Car car : loadedCars) {
-            if (favoriteIds.contains(car.getId())) {
-                car.setFavorite(true);
-                favoriteCars.add(car);
+        for (Car loadedCar : loadedCars) {
+            if (loadedCar != null) {
+                loadedCar.setFavorite(isFavorite(loadedCar));
             }
         }
-        Log.d(TAG, "Favorites synced: " + favoriteCars.size() + " cars");
     }
 
     public static void clearCache() {
@@ -121,6 +164,5 @@ public class Favorites {
         if (prefs != null) {
             prefs.edit().clear().apply();
         }
-        Log.d(TAG, "Favorites cache cleared");
     }
 }

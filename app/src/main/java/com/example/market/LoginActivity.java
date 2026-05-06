@@ -4,10 +4,8 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
-import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ProgressBar;
-import android.widget.Switch;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -18,7 +16,6 @@ import com.google.firebase.auth.FirebaseAuth;
 public class LoginActivity extends AppCompatActivity {
     private EditText emailEditText, passwordEditText;
     private Button loginButton, registerButton;
-    private Switch musicToggle;
     private ProgressBar progressBar;
     private FirebaseAuth mAuth;
 
@@ -28,18 +25,16 @@ public class LoginActivity extends AppCompatActivity {
         setContentView(R.layout.activity_login);
 
         mAuth = FirebaseAuth.getInstance();
-        checkCurrentUser();
 
-        initViews();
-        setupToolbar();
-        setupMusicToggle();
-    }
-
-    private void checkCurrentUser() {
+        // Проверяем, не вошел ли уже пользователь
         if (mAuth.getCurrentUser() != null) {
             startActivity(new Intent(this, MainActivity.class));
             finish();
+            return;
         }
+
+        initViews();
+        setupToolbar();
     }
 
     private void initViews() {
@@ -47,73 +42,71 @@ public class LoginActivity extends AppCompatActivity {
         passwordEditText = findViewById(R.id.passwordEditText);
         loginButton = findViewById(R.id.loginButton);
         registerButton = findViewById(R.id.registerButton);
-
         progressBar = findViewById(R.id.progressBar);
 
-        loginButton.setOnClickListener(v -> loginUser());
-        registerButton.setOnClickListener(v -> startActivity(new Intent(this, RegisterActivity.class)));
+        if (loginButton != null) {
+            loginButton.setOnClickListener(v -> loginUser());
+        }
+
+        if (registerButton != null) {
+            registerButton.setOnClickListener(v -> {
+                startActivity(new Intent(this, RegisterActivity.class));
+            });
+        }
     }
 
     private void setupToolbar() {
         Toolbar toolbar = findViewById(R.id.toolbar);
         if (toolbar != null) {
-            toolbar.setNavigationOnClickListener(v -> onBackPressed());
+            toolbar.setTitle("SwagBuyCar");
+            toolbar.setNavigationOnClickListener(v -> finish());
         }
-    }
-
-    private void setupMusicToggle() {
-        musicToggle.setChecked(MusicManager.isMusicPlaying());
-
-        musicToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (isChecked) {
-                    MusicManager.playMusic(LoginActivity.this);
-                    Toast.makeText(LoginActivity.this, "Swag музыка включена! 🎵", Toast.LENGTH_SHORT).show();
-                } else {
-                    MusicManager.stopMusic();
-                    Toast.makeText(LoginActivity.this, "Swag музыка выключена", Toast.LENGTH_SHORT).show();
-                }
-            }
-        });
     }
 
     private void loginUser() {
-        String email = emailEditText.getText().toString().trim();
-        String password = passwordEditText.getText().toString().trim();
+        String email = emailEditText != null ? emailEditText.getText().toString().trim() : "";
+        String password = passwordEditText != null ? passwordEditText.getText().toString().trim() : "";
 
-        if (email.isEmpty() || password.isEmpty()) {
-            Toast.makeText(this, "Заполните все поля", Toast.LENGTH_SHORT).show();
+        if (email.isEmpty()) {
+            Toast.makeText(this, "Введите email", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        progressBar.setVisibility(View.VISIBLE);
-        loginButton.setEnabled(false);
+        if (password.isEmpty()) {
+            Toast.makeText(this, "Введите пароль", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (progressBar != null) {
+            progressBar.setVisibility(View.VISIBLE);
+        }
+        if (loginButton != null) {
+            loginButton.setEnabled(false);
+        }
 
         mAuth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, task -> {
-                    progressBar.setVisibility(View.GONE);
-                    loginButton.setEnabled(true);
+                    if (progressBar != null) {
+                        progressBar.setVisibility(View.GONE);
+                    }
+                    if (loginButton != null) {
+                        loginButton.setEnabled(true);
+                    }
 
                     if (task.isSuccessful()) {
-                        Toast.makeText(LoginActivity.this, "Вход успешен!", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(LoginActivity.this, "Вход выполнен успешно!", Toast.LENGTH_SHORT).show();
                         startActivity(new Intent(this, MainActivity.class));
-                        finish();
+                        finishAffinity();
                     } else {
                         String errorMessage = "Ошибка входа";
                         if (task.getException() != null) {
-                            errorMessage += ": " + task.getException().getMessage();
+                            String message = task.getException().getMessage();
+                            if (message != null) {
+                                errorMessage = message;
+                            }
                         }
                         Toast.makeText(LoginActivity.this, errorMessage, Toast.LENGTH_LONG).show();
                     }
                 });
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        if (musicToggle != null) {
-            musicToggle.setChecked(MusicManager.isMusicPlaying());
-        }
     }
 }

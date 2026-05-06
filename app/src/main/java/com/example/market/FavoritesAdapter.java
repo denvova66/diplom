@@ -15,20 +15,16 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 
+import java.io.File;
 import java.util.List;
 
 public class FavoritesAdapter extends RecyclerView.Adapter<FavoritesAdapter.FavoriteViewHolder> {
     private List<Car> carList;
     private Context context;
-    private FavoritesActivity favoritesActivity;
 
     public FavoritesAdapter(List<Car> carList, Context context) {
         this.carList = carList;
         this.context = context;
-        // Сохраняем ссылку на активность
-        if (context instanceof FavoritesActivity) {
-            this.favoritesActivity = (FavoritesActivity) context;
-        }
     }
 
     @NonNull
@@ -41,13 +37,17 @@ public class FavoritesAdapter extends RecyclerView.Adapter<FavoritesAdapter.Favo
 
     @Override
     public void onBindViewHolder(@NonNull FavoriteViewHolder holder, int position) {
-        Car car = carList.get(position);
-        holder.bind(car);
+        if (carList != null && position < carList.size()) {
+            Car car = carList.get(position);
+            if (car != null) {
+                holder.bind(car);
+            }
+        }
     }
 
     @Override
     public int getItemCount() {
-        return carList.size();
+        return carList != null ? carList.size() : 0;
     }
 
     class FavoriteViewHolder extends RecyclerView.ViewHolder {
@@ -66,61 +66,92 @@ public class FavoritesAdapter extends RecyclerView.Adapter<FavoritesAdapter.Favo
         }
 
         public void bind(Car car) {
-            brandModelText.setText(car.getBrand() + " " + car.getModel());
-            yearText.setText(String.valueOf(car.getYear()));
-            mileageText.setText(car.getMileage() + " км");
-            priceText.setText(String.format("%.0f руб.", car.getPrice()));
+            if (car == null) return;
 
-            // Загружаем изображение
-            if (car.getImageUrl() != null && !car.getImageUrl().isEmpty()) {
-                if (car.getImageUrl().startsWith("local://")) {
-                    String imageName = car.getImageUrl().replace("local://", "");
-                    int resourceId = context.getResources().getIdentifier(imageName, "drawable", context.getPackageName());
-                    if (resourceId != 0) {
-                        carImage.setImageResource(resourceId);
-                    } else {
-                        carImage.setImageResource(R.drawable.ic_car_placeholder);
-                    }
-                } else {
-                    Glide.with(context)
-                            .load(car.getImageUrl())
-                            .placeholder(R.drawable.ic_car_placeholder)
-                            .into(carImage);
-                }
-            } else {
-                carImage.setImageResource(R.drawable.ic_car_placeholder);
+            if (brandModelText != null) {
+                brandModelText.setText(car.getFullName());
+            }
+            if (yearText != null) {
+                yearText.setText(String.valueOf(car.getYear()));
+            }
+            if (mileageText != null) {
+                mileageText.setText(car.getMileage() + " км");
+            }
+            if (priceText != null) {
+                priceText.setText(String.format("%,.0f ₽", car.getPrice()));
             }
 
-            favoriteButton.setImageResource(R.drawable.ic_favorite_filled);
-            favoriteButton.setOnClickListener(v -> {
-                int position = getAdapterPosition();
-                if (position != RecyclerView.NO_POSITION) {
-                    Car carToRemove = carList.get(position);
-                    Favorites.removeFavoriteCar(carToRemove);
-                    carToRemove.setFavorite(false);
-                    carList.remove(position);
-                    notifyItemRemoved(position);
-                    notifyItemRangeChanged(position, carList.size());
+            // Загружаем изображение
+            loadCarImage(car);
 
-                    // Показываем сообщение
-                    Toast.makeText(context, "Удалено из избранного", Toast.LENGTH_SHORT).show();
-
-                    // Обновляем список если пустой через активность
-                    if (favoritesActivity != null && carList.isEmpty()) {
-                        favoritesActivity.updateFavoritesList();
+            // Кнопка избранного
+            if (favoriteButton != null) {
+                favoriteButton.setImageResource(R.drawable.ic_favorite_filled);
+                favoriteButton.setOnClickListener(v -> {
+                    int position = getAdapterPosition();
+                    if (position != RecyclerView.NO_POSITION && carList != null && position < carList.size()) {
+                        Car carToRemove = carList.get(position);
+                        Favorites.removeFavoriteCar(carToRemove);
+                        carList.remove(position);
+                        notifyItemRemoved(position);
+                        notifyItemRangeChanged(position, carList.size());
+                        Toast.makeText(context, "Удалено из избранного", Toast.LENGTH_SHORT).show();
                     }
-                }
-            });
+                });
+            }
 
+            // Клик по элементу
             itemView.setOnClickListener(v -> {
                 int position = getAdapterPosition();
-                if (position != RecyclerView.NO_POSITION) {
+                if (position != RecyclerView.NO_POSITION && carList != null && position < carList.size()) {
                     Car clickedCar = carList.get(position);
                     Intent intent = new Intent(context, CarDetailActivity.class);
                     intent.putExtra("car", clickedCar);
                     context.startActivity(intent);
                 }
             });
+        }
+
+        private void loadCarImage(Car car) {
+            if (carImage == null) return;
+
+            String imageUrl = car.getImageUrl();
+            if (imageUrl != null && !imageUrl.isEmpty()) {
+                // Локальный файл
+                if (imageUrl.startsWith("/")) {
+                    File imageFile = new File(imageUrl);
+                    if (imageFile.exists()) {
+                        Glide.with(context)
+                                .load(imageFile)
+                                .placeholder(R.drawable.ic_car_placeholder)
+                                .error(R.drawable.ic_car_placeholder)
+                                .into(carImage);
+                    } else {
+                        carImage.setImageResource(R.drawable.ic_car_placeholder);
+                    }
+                }
+                // Локальный ресурс
+                else if (imageUrl.startsWith("local://")) {
+                    String imageName = imageUrl.replace("local://", "");
+                    int resourceId = context.getResources().getIdentifier(
+                            imageName, "drawable", context.getPackageName());
+                    if (resourceId != 0) {
+                        carImage.setImageResource(resourceId);
+                    } else {
+                        carImage.setImageResource(R.drawable.ic_car_placeholder);
+                    }
+                }
+                // URL из Firebase
+                else {
+                    Glide.with(context)
+                            .load(imageUrl)
+                            .placeholder(R.drawable.ic_car_placeholder)
+                            .error(R.drawable.ic_car_placeholder)
+                            .into(carImage);
+                }
+            } else {
+                carImage.setImageResource(R.drawable.ic_car_placeholder);
+            }
         }
     }
 }

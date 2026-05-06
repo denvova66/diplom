@@ -25,24 +25,15 @@ public class App extends Application {
         try {
             Favorites.init(this);
             UserManager.init(this);
-            Log.d(TAG, "Favorites and UserManager initialized successfully");
+            LocalCarManager.init(this);
+            ViewHistoryManager.init(this);
+            Log.d(TAG, "Managers initialized successfully");
         } catch (Exception e) {
-            Log.e(TAG, "Favorites initialization failed", e);
-            Favorites.clearCache();
+            Log.e(TAG, "Managers initialization failed", e);
         }
-
-        LocalCarManager.init(this);
-        MusicManager.init(this);
-        Log.d(TAG, "LocalCarManager and MusicManager initialized successfully");
     }
 
     public static Context getContext() {
         return context;
-    }
-
-    @Override
-    public void onTerminate() {
-        super.onTerminate();
-        MusicManager.release();
     }
 }

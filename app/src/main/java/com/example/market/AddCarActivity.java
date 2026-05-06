@@ -35,19 +35,18 @@ public class AddCarActivity extends AppCompatActivity {
     private ImageView carImageView;
     private ProgressBar progressBar;
     private Uri imageUri;
-    private FirebaseAuth mAuth;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_car);
 
-        mAuth = FirebaseAuth.getInstance();
-        LocalCarManager.init(this);
-
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        if (toolbar != null) {
-            toolbar.setNavigationOnClickListener(v -> onBackPressed());
+        // Проверяем авторизацию
+        if (FirebaseAuth.getInstance().getCurrentUser() == null) {
+            Toast.makeText(this, "Необходимо войти в систему", Toast.LENGTH_SHORT).show();
+            startActivity(new Intent(this, LoginActivity.class));
+            finish();
+            return;
         }
 
         initViews();
@@ -66,71 +65,123 @@ public class AddCarActivity extends AppCompatActivity {
         carImageView = findViewById(R.id.carImageView);
         progressBar = findViewById(R.id.progressBar);
 
-        if (addImageButton == null) {
-            Log.e(TAG, "addImageButton not found!");
-            Toast.makeText(this, "Ошибка: кнопка добавления фото не найдена", Toast.LENGTH_SHORT).show();
-            return;
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        if (toolbar != null) {
+            toolbar.setTitle("Добавить автомобиль");
+            toolbar.setNavigationOnClickListener(v -> finish());
         }
 
-        if (submitButton == null) {
-            Log.e(TAG, "submitButton not found!");
-            Toast.makeText(this, "Ошибка: кнопка отправки не найдена", Toast.LENGTH_SHORT).show();
-            return;
+        if (addImageButton != null) {
+            addImageButton.setOnClickListener(v -> selectImage());
         }
 
-        addImageButton.setOnClickListener(v -> selectImage());
-        submitButton.setOnClickListener(v -> addCar());
+        if (submitButton != null) {
+            submitButton.setOnClickListener(v -> addCar());
+        }
     }
 
     private void selectImage() {
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
         intent.setType("image/*");
-        startActivityForResult(Intent.createChooser(intent, "Select Image"), PICK_IMAGE_REQUEST);
+        startActivityForResult(Intent.createChooser(intent, "Выберите фото"), PICK_IMAGE_REQUEST);
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == PICK_IMAGE_REQUEST && resultCode == RESULT_OK && data != null && data.getData() != null) {
+        if (requestCode == PICK_IMAGE_REQUEST && resultCode == RESULT_OK
+                && data != null && data.getData() != null) {
             imageUri = data.getData();
-            try {
-                carImageView.setImageURI(imageUri);
-                carImageView.setVisibility(View.VISIBLE);
-            } catch (Exception e) {
-                Log.e(TAG, "Error setting image", e);
-                Toast.makeText(this, "Ошибка загрузки изображения", Toast.LENGTH_SHORT).show();
+            if (carImageView != null) {
+                try {
+                    carImageView.setImageURI(imageUri);
+                    carImageView.setVisibility(View.VISIBLE);
+                } catch (Exception e) {
+                    Log.e(TAG, "Error setting image", e);
+                    Toast.makeText(this, "Ошибка загрузки изображения", Toast.LENGTH_SHORT).show();
+                }
             }
         }
     }
 
     private void addCar() {
-        String brand = brandEditText.getText().toString().trim();
-        String model = modelEditText.getText().toString().trim();
-        String yearStr = yearEditText.getText().toString().trim();
-        String mileageStr = mileageEditText.getText().toString().trim();
-        String engineStr = engineEditText.getText().toString().trim();
-        String priceStr = priceEditText.getText().toString().trim();
-        String description = descriptionEditText.getText().toString().trim();
+        String brand = getTextFromEditText(brandEditText);
+        String model = getTextFromEditText(modelEditText);
+        String yearStr = getTextFromEditText(yearEditText);
+        String mileageStr = getTextFromEditText(mileageEditText);
+        String engineStr = getTextFromEditText(engineEditText);
+        String priceStr = getTextFromEditText(priceEditText);
+        String description = getTextFromEditText(descriptionEditText);
 
-        if (validateInput(brand, model, yearStr, mileageStr, engineStr, priceStr)) {
-            try {
-                int year = Integer.parseInt(yearStr);
-                int mileage = Integer.parseInt(mileageStr);
-                double engineVolume = Double.parseDouble(engineStr);
-                double price = Double.parseDouble(priceStr);
+        if (!validateInput(brand, model, yearStr, mileageStr, engineStr, priceStr)) {
+            return;
+        }
 
-                if (validateNumbers(year, mileage, engineVolume, price)) {
-                    saveCarLocally(brand, model, year, mileage, engineVolume, price, description);
-                }
-            } catch (NumberFormatException e) {
-                Toast.makeText(this, "Проверьте корректность введенных числовых данных", Toast.LENGTH_SHORT).show();
-                Log.e(TAG, "Number format error", e);
+        try {
+            int year = Integer.parseInt(yearStr);
+            int mileage = Integer.parseInt(mileageStr);
+            double engineVolume = Double.parseDouble(engineStr);
+            double price = Double.parseDouble(priceStr);
+
+            if (!validateNumbers(year, mileage, engineVolume, price)) {
+                return;
             }
+
+            FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+            if (user == null) {
+                Toast.makeText(this, "Ошибка: пользователь не авторизован", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            // Показываем прогресс
+            if (progressBar != null) progressBar.setVisibility(View.VISIBLE);
+            if (submitButton != null) submitButton.setEnabled(false);
+
+            // Сохраняем в фоновом потоке
+            new Thread(() -> {
+                String localImagePath = saveImageToLocalStorage(imageUri);
+
+                Car car = new Car();
+                car.setId(UUID.randomUUID().toString());
+                car.setBrand(brand);
+                car.setModel(model);
+                car.setYear(year);
+                car.setMileage(mileage);
+                car.setEngineVolume(engineVolume);
+                car.setPrice(price);
+                car.setDescription(description);
+                car.setOwnerId(user.getUid());
+                car.setImageUrls(Collections.singletonList(localImagePath != null ? localImagePath : ""));
+                car.setCreatedAt(new Date());
+                car.setFavorite(false);
+                car.setLocal(true);
+
+                LocalCarManager.addCar(car);
+
+                runOnUiThread(() -> {
+                    if (progressBar != null) progressBar.setVisibility(View.GONE);
+                    if (submitButton != null) submitButton.setEnabled(true);
+
+                    Toast.makeText(AddCarActivity.this, "Автомобиль успешно добавлен!", Toast.LENGTH_SHORT).show();
+
+                    Intent intent = new Intent(AddCarActivity.this, MainActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(intent);
+                    finish();
+                });
+            }).start();
+
+        } catch (NumberFormatException e) {
+            Toast.makeText(this, "Проверьте корректность числовых данных", Toast.LENGTH_SHORT).show();
         }
     }
 
-    private boolean validateInput(String brand, String model, String yearStr, String mileageStr,
-                                  String engineStr, String priceStr) {
+    private String getTextFromEditText(EditText editText) {
+        return editText != null ? editText.getText().toString().trim() : "";
+    }
+
+    private boolean validateInput(String brand, String model, String yearStr,
+                                  String mileageStr, String engineStr, String priceStr) {
         if (brand.isEmpty()) {
             showError("Введите марку автомобиля", brandEditText);
             return false;
@@ -165,7 +216,8 @@ public class AddCarActivity extends AppCompatActivity {
     private boolean validateNumbers(int year, int mileage, double engineVolume, double price) {
         int currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR);
         if (year < 1900 || year > currentYear + 1) {
-            Toast.makeText(this, "Введите корректный год (1900-" + (currentYear + 1) + ")", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Введите корректный год (1900-" + (currentYear + 1) + ")",
+                    Toast.LENGTH_SHORT).show();
             return false;
         }
         if (mileage < 0) {
@@ -185,83 +237,35 @@ public class AddCarActivity extends AppCompatActivity {
 
     private void showError(String message, EditText editText) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
-        editText.requestFocus();
-    }
-
-    private void saveCarLocally(String brand, String model, int year,
-                                int mileage, double engineVolume,
-                                double price, String description) {
-        progressBar.setVisibility(View.VISIBLE);
-        submitButton.setEnabled(false);
-
-        FirebaseUser user = mAuth.getCurrentUser();
-        if (user == null) {
-            progressBar.setVisibility(View.GONE);
-            submitButton.setEnabled(true);
-            Toast.makeText(this, "Ошибка: пользователь не авторизован", Toast.LENGTH_SHORT).show();
-            return;
+        if (editText != null) {
+            editText.requestFocus();
         }
-
-        new Thread(() -> {
-            final String localImagePath = saveImageToLocalStorage(imageUri);
-
-            runOnUiThread(() -> {
-                Car car = new Car();
-                car.setId(UUID.randomUUID().toString());
-                car.setBrand(brand);
-                car.setModel(model);
-                car.setYear(year);
-                car.setMileage(mileage);
-                car.setEngineVolume(engineVolume);
-                car.setPrice(price);
-                car.setDescription(description);
-                car.setOwnerId(user.getUid());
-                car.setImageUrls(Collections.singletonList(localImagePath != null ? localImagePath : ""));
-                car.setCreatedAt(new Date());
-                car.setFavorite(false);
-                car.setLocal(true);
-
-                LocalCarManager.addCar(car);
-
-                Log.d(TAG, "Автомобиль успешно сохранен локально: " + car.getId());
-                progressBar.setVisibility(View.GONE);
-                submitButton.setEnabled(true);
-
-                Toast.makeText(AddCarActivity.this, "Автомобиль успешно добавлен!", Toast.LENGTH_SHORT).show();
-
-                Intent intent = new Intent(AddCarActivity.this, MainActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(intent);
-                finish();
-            });
-        }).start();
     }
 
     private String saveImageToLocalStorage(Uri imageUri) {
+        if (imageUri == null) return null;
+
         try {
             InputStream inputStream = getContentResolver().openInputStream(imageUri);
             if (inputStream == null) return null;
 
             File imagesDir = new File(getFilesDir(), "car_images");
             if (!imagesDir.exists()) {
-                if (!imagesDir.mkdirs()) {
-                    Log.e(TAG, "Failed to create directory");
-                    return null;
-                }
+                imagesDir.mkdirs();
             }
 
             String fileName = "car_" + System.currentTimeMillis() + ".jpg";
             File imageFile = new File(imagesDir, fileName);
 
             FileOutputStream outputStream = new FileOutputStream(imageFile);
-            byte[] buffer = new byte[1024];
+            byte[] buffer = new byte[4096];
             int bytesRead;
             while ((bytesRead = inputStream.read(buffer)) != -1) {
                 outputStream.write(buffer, 0, bytesRead);
             }
 
-            inputStream.close();
             outputStream.close();
+            inputStream.close();
 
             return imageFile.getAbsolutePath();
 
