@@ -19,6 +19,7 @@ import com.bumptech.glide.Glide;
 import com.google.firebase.auth.FirebaseAuth;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 
 public class CarAdapter extends RecyclerView.Adapter<CarAdapter.CarViewHolder> {
@@ -27,7 +28,7 @@ public class CarAdapter extends RecyclerView.Adapter<CarAdapter.CarViewHolder> {
     private FirebaseAuth mAuth;
 
     public CarAdapter(List<Car> carList, Context context) {
-        this.carList = carList;
+        this.carList = carList != null ? carList : new ArrayList<>();
         this.context = context;
         this.mAuth = FirebaseAuth.getInstance();
     }
@@ -42,8 +43,12 @@ public class CarAdapter extends RecyclerView.Adapter<CarAdapter.CarViewHolder> {
 
     @Override
     public void onBindViewHolder(@NonNull CarViewHolder holder, int position) {
-        Car car = carList.get(position);
-        holder.bind(car);
+        if (carList != null && position < carList.size()) {
+            Car car = carList.get(position);
+            if (car != null) {
+                holder.bind(car);
+            }
+        }
     }
 
     @Override
@@ -52,13 +57,13 @@ public class CarAdapter extends RecyclerView.Adapter<CarAdapter.CarViewHolder> {
     }
 
     public void updateList(List<Car> newList) {
-        carList = newList;
+        this.carList = newList != null ? newList : new ArrayList<>();
         notifyDataSetChanged();
     }
 
     class CarViewHolder extends RecyclerView.ViewHolder {
         private ImageView carImage;
-        private TextView brandModelText, yearText, mileageText, priceText;
+        private TextView brandModelText, yearText, mileageText, engineText, priceText;
         private ImageButton favoriteButton;
 
         public CarViewHolder(@NonNull View itemView) {
@@ -67,6 +72,7 @@ public class CarAdapter extends RecyclerView.Adapter<CarAdapter.CarViewHolder> {
             brandModelText = itemView.findViewById(R.id.brandModelText);
             yearText = itemView.findViewById(R.id.yearText);
             mileageText = itemView.findViewById(R.id.mileageText);
+            engineText = itemView.findViewById(R.id.engineText);
             priceText = itemView.findViewById(R.id.priceText);
             favoriteButton = itemView.findViewById(R.id.favoriteButton);
 
@@ -84,21 +90,82 @@ public class CarAdapter extends RecyclerView.Adapter<CarAdapter.CarViewHolder> {
         public void bind(Car car) {
             if (car == null) return;
 
-            brandModelText.setText(car.getBrand() + " " + car.getModel());
-            yearText.setText(String.valueOf(car.getYear()));
-            mileageText.setText(car.getMileage() + " км");
-            priceText.setText(String.format("%.0f руб.", car.getPrice()));
+            if (brandModelText != null) {
+                brandModelText.setText(car.getFullName());
+            }
+            if (yearText != null) {
+                yearText.setText(String.valueOf(car.getYear()));
+            }
+            if (mileageText != null) {
+                mileageText.setText(car.getMileage() + " км");
+            }
+            if (engineText != null) {
+                engineText.setText(car.getEngineVolume() + " л");
+            }
+            if (priceText != null) {
+                priceText.setText(String.format("%,.0f ₽", car.getPrice()));
+            }
 
             loadCarImage(car);
-            updateFavoriteButton(car);
 
-            favoriteButton.setOnClickListener(v -> {
-                toggleFavorite(car);
-                updateFavoriteButton(car);
-            });
+            if (favoriteButton != null) {
+                updateFavoriteIcon(car);
+                favoriteButton.setOnClickListener(v -> {
+                    toggleFavorite(car);
+                    updateFavoriteIcon(car);
+                });
+            }
+        }
+
+        private void loadCarImage(Car car) {
+            if (carImage == null) return;
+
+            String imageUrl = car.getImageUrl();
+            if (imageUrl != null && !imageUrl.isEmpty()) {
+                if (imageUrl.startsWith("/") || imageUrl.startsWith("file://")) {
+                    // Локальный файл
+                    String path = imageUrl.replace("file://", "");
+                    File imageFile = new File(path);
+                    if (imageFile.exists()) {
+                        Glide.with(context)
+                                .load(imageFile)
+                                .placeholder(R.drawable.ic_car_placeholder)
+                                .error(R.drawable.ic_car_placeholder)
+                                .centerCrop()
+                                .into(carImage);
+                    } else {
+                        carImage.setImageResource(R.drawable.ic_car_placeholder);
+                    }
+                } else if (imageUrl.startsWith("local://")) {
+                    String imageName = imageUrl.replace("local://", "");
+                    int resourceId = context.getResources().getIdentifier(
+                            imageName, "drawable", context.getPackageName());
+                    carImage.setImageResource(resourceId != 0 ? resourceId : R.drawable.ic_car_placeholder);
+                } else {
+                    // URL из Firebase
+                    Glide.with(context)
+                            .load(imageUrl)
+                            .placeholder(R.drawable.ic_car_placeholder)
+                            .error(R.drawable.ic_car_placeholder)
+                            .centerCrop()
+                            .into(carImage);
+                }
+            } else {
+                carImage.setImageResource(R.drawable.ic_car_placeholder);
+            }
+        }
+
+        private void updateFavoriteIcon(Car car) {
+            if (favoriteButton != null && car != null) {
+                favoriteButton.setImageResource(
+                        car.isFavorite() ? R.drawable.ic_favorite_filled : R.drawable.ic_favorite
+                );
+            }
         }
 
         private void toggleFavorite(Car car) {
+            if (car == null) return;
+
             if (car.isFavorite()) {
                 Favorites.removeFavoriteCar(car);
                 car.setFavorite(false);
@@ -108,72 +175,6 @@ public class CarAdapter extends RecyclerView.Adapter<CarAdapter.CarViewHolder> {
                 car.setFavorite(true);
                 Toast.makeText(context, "Добавлено в избранное", Toast.LENGTH_SHORT).show();
             }
-        }
-
-        private void updateFavoriteButton(Car car) {
-            if (favoriteButton != null) {
-                favoriteButton.setImageResource(car.isFavorite() ?
-                        R.drawable.ic_favorite_filled : R.drawable.ic_favorite);
-            }
-        }
-
-        private void loadCarImage(Car car) {
-            if (car.getImageUrl() != null && !car.getImageUrl().isEmpty()) {
-                if (car.getImageUrl().startsWith("/")) {
-                    // Локальное изображение из файловой системы
-                    loadFromFile(car.getImageUrl());
-                } else if (car.getImageUrl().startsWith("local://")) {
-                    // Локальное изображение из drawable
-                    loadFromLocal(car.getImageUrl());
-                } else {
-                    // URL изображение (Firebase Storage)
-                    loadFromUrl(car.getImageUrl());
-                }
-            } else {
-                // Если нет изображения, показываем placeholder
-                carImage.setImageResource(R.drawable.ic_car_placeholder);
-            }
-        }
-
-        private void loadFromFile(String imagePath) {
-            try {
-                File imageFile = new File(imagePath);
-                if (imageFile.exists()) {
-                    Bitmap bitmap = BitmapFactory.decodeFile(imageFile.getAbsolutePath());
-                    carImage.setImageBitmap(bitmap);
-                } else {
-                    carImage.setImageResource(R.drawable.ic_car_placeholder);
-                }
-            } catch (Exception e) {
-                carImage.setImageResource(R.drawable.ic_car_placeholder);
-            }
-        }
-
-        private void loadFromLocal(String imageUrl) {
-            String imageName = imageUrl.replace("local://", "");
-            int resourceId = getResourceId(imageName);
-
-            if (resourceId != 0) {
-                carImage.setImageResource(resourceId);
-            } else {
-                carImage.setImageResource(R.drawable.ic_car_placeholder);
-            }
-        }
-
-        private int getResourceId(String imageName) {
-            return context.getResources().getIdentifier(
-                    imageName,
-                    "drawable",
-                    context.getPackageName()
-            );
-        }
-
-        private void loadFromUrl(String imageUrl) {
-            Glide.with(context)
-                    .load(imageUrl)
-                    .placeholder(R.drawable.ic_car_placeholder)
-                    .error(R.drawable.ic_car_placeholder)
-                    .into(carImage);
         }
     }
 }

@@ -55,23 +55,18 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
     private void setupClickListeners() {
-        // Редактировать профиль
         Button editProfileButton = findViewById(R.id.editProfileButton);
         if (editProfileButton != null) {
             editProfileButton.setOnClickListener(v -> changeAvatar());
         }
 
-        // Мои объявления
         View myAdsButton = findViewById(R.id.myAdsButton);
         if (myAdsButton != null) {
             myAdsButton.setOnClickListener(v -> {
-                Intent intent = new Intent(ProfileActivity.this, MainActivity.class);
-                intent.putExtra("showMyAds", true);
-                startActivity(intent);
+                Toast.makeText(this, "Мои объявления", Toast.LENGTH_SHORT).show();
             });
         }
 
-        // Избранное
         View favoritesButton = findViewById(R.id.favoritesButton);
         if (favoritesButton != null) {
             favoritesButton.setOnClickListener(v -> {
@@ -79,16 +74,20 @@ public class ProfileActivity extends AppCompatActivity {
             });
         }
 
-        // Настройки
-        View settingsButton = findViewById(R.id.settingsButton);
-        if (settingsButton != null) {
-            settingsButton.setOnClickListener(v -> {
-                Toast.makeText(ProfileActivity.this,
-                        "Настройки в разработке", Toast.LENGTH_SHORT).show();
+        View chatsButton = findViewById(R.id.chatsButton);
+        if (chatsButton != null) {
+            chatsButton.setOnClickListener(v -> {
+                startActivity(new Intent(ProfileActivity.this, ChatListActivity.class));
             });
         }
 
-        // Выйти
+        View ordersButton = findViewById(R.id.ordersButton);
+        if (ordersButton != null) {
+            ordersButton.setOnClickListener(v -> {
+                startActivity(new Intent(ProfileActivity.this, OrdersActivity.class));
+            });
+        }
+
         Button logoutButton = findViewById(R.id.logoutButton);
         if (logoutButton != null) {
             logoutButton.setOnClickListener(v -> logout());
@@ -117,18 +116,19 @@ public class ProfileActivity extends AppCompatActivity {
         TextView userEmailText = findViewById(R.id.userEmailText);
 
         if (userNameText != null) {
-            userNameText.setText(currentUser.getFullName());
+            String fullName = currentUser.getFullName();
+            userNameText.setText(fullName != null && !fullName.isEmpty() ? fullName : "Пользователь");
         }
         if (userEmailText != null) {
-            userEmailText.setText(currentUser.getEmail());
+            userEmailText.setText(currentUser.getEmail() != null ? currentUser.getEmail() : "");
         }
 
-        // Загружаем аватар
         if (userAvatar != null && currentUser.getAvatarUrl() != null
                 && !currentUser.getAvatarUrl().isEmpty()) {
             Glide.with(this)
                     .load(currentUser.getAvatarUrl())
                     .placeholder(R.drawable.ic_person)
+                    .error(R.drawable.ic_person)
                     .circleCrop()
                     .into(userAvatar);
         }
@@ -149,7 +149,10 @@ public class ProfileActivity extends AppCompatActivity {
                 && data != null && data.getData() != null) {
             avatarUri = data.getData();
             if (userAvatar != null) {
-                userAvatar.setImageURI(avatarUri);
+                Glide.with(this)
+                        .load(avatarUri)
+                        .circleCrop()
+                        .into(userAvatar);
             }
             uploadAvatar();
         }

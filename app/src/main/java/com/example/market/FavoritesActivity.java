@@ -14,17 +14,24 @@ import java.util.List;
 
 public class FavoritesActivity extends AppCompatActivity {
     private RecyclerView favoritesRecyclerView;
-    private FavoritesAdapter favoritesAdapter;
+    private CarAdapter favoritesAdapter;
     private List<Car> favoriteCars;
-    private TextView emptyText;
+    private View emptyState;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_favorites);
 
+        // Инициализируем Favorites
+        Favorites.init(this);
+
+        // Настраиваем Toolbar
         Toolbar toolbar = findViewById(R.id.toolbar);
-        toolbar.setNavigationOnClickListener(v -> onBackPressed());
+        if (toolbar != null) {
+            setSupportActionBar(toolbar);
+            toolbar.setNavigationOnClickListener(v -> finish());
+        }
 
         initViews();
         setupRecyclerView();
@@ -32,42 +39,59 @@ public class FavoritesActivity extends AppCompatActivity {
 
     private void initViews() {
         favoritesRecyclerView = findViewById(R.id.favoritesRecyclerView);
-        emptyText = findViewById(R.id.emptyText);
-        favoritesRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        emptyState = findViewById(R.id.emptyState);
+
+        // Проверяем что RecyclerView существует
+        if (favoritesRecyclerView == null) {
+            finish();
+            return;
+        }
     }
 
     private void setupRecyclerView() {
-        // Используем копию списка
+        // Загружаем избранные авто
         favoriteCars = new ArrayList<>(Favorites.getFavoriteCars());
-        favoritesAdapter = new FavoritesAdapter(favoriteCars, this);
+
+        // Настраиваем RecyclerView
+        favoritesRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        favoritesAdapter = new CarAdapter(favoriteCars, this);
         favoritesRecyclerView.setAdapter(favoritesAdapter);
 
-        updateFavoritesList();
+        updateEmptyState();
     }
 
-    // Изменяем на public чтобы можно было вызывать из адаптера
-    public void updateFavoritesList() {
-        // Обновляем список из источника
-        favoriteCars.clear();
-        favoriteCars.addAll(Favorites.getFavoriteCars());
-        if (favoritesAdapter != null) {
-            favoritesAdapter.notifyDataSetChanged();
+    public void updateEmptyState() {
+        if (favoriteCars == null || favoriteCars.isEmpty()) {
+            if (emptyState != null) {
+                emptyState.setVisibility(View.VISIBLE);
+            }
+            if (favoritesRecyclerView != null) {
+                favoritesRecyclerView.setVisibility(View.GONE);
+            }
+        } else {
+            if (emptyState != null) {
+                emptyState.setVisibility(View.GONE);
+            }
+            if (favoritesRecyclerView != null) {
+                favoritesRecyclerView.setVisibility(View.VISIBLE);
+            }
         }
 
-        // Обновляем видимость сообщения о пустом списке
-        if (favoriteCars.isEmpty()) {
-            emptyText.setVisibility(View.VISIBLE);
-            favoritesRecyclerView.setVisibility(View.GONE);
-        } else {
-            emptyText.setVisibility(View.GONE);
-            favoritesRecyclerView.setVisibility(View.VISIBLE);
+        if (favoritesAdapter != null) {
+            favoritesAdapter.notifyDataSetChanged();
         }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        // Всегда обновляем список при возобновлении активности
-        updateFavoritesList();
+        // Обновляем список при возвращении на экран
+        favoriteCars.clear();
+        favoriteCars.addAll(Favorites.getFavoriteCars());
+
+        if (favoritesAdapter != null) {
+            favoritesAdapter.notifyDataSetChanged();
+        }
+        updateEmptyState();
     }
 }

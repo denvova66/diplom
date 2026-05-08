@@ -12,6 +12,7 @@
         android:orientation="vertical"
         android:background="#F5F5F5">
 
+        <!-- Toolbar -->
         <com.google.android.material.appbar.AppBarLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -52,6 +53,7 @@
                 </LinearLayout>
             </androidx.appcompat.widget.Toolbar>
 
+            <!-- Поиск -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -96,6 +98,7 @@
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
 
+                <!-- Filter Chips -->
                 <HorizontalScrollView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -112,54 +115,42 @@
                             style="@style/FilterChipStyle"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:checkable="true"
-                            android:text="Марка" />
+                            android:text="Марка ▾" />
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chipModel"
                             style="@style/FilterChipStyle"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:checkable="true"
-                            android:text="Модель" />
+                            android:text="Модель ▾" />
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chipYear"
                             style="@style/FilterChipStyle"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:checkable="true"
-                            android:text="Год" />
+                            android:text="Год ▾" />
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chipPrice"
                             style="@style/FilterChipStyle"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:checkable="true"
-                            android:text="Цена" />
+                            android:text="Цена ▾" />
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chipMileage"
                             style="@style/FilterChipStyle"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:checkable="true"
-                            android:text="Пробег" />
-
-                        <com.google.android.material.chip.Chip
-                            android:id="@+id/chipBody"
-                            style="@style/FilterChipStyle"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:checkable="true"
-                            android:text="Кузов" />
+                            android:text="Пробег ▾" />
 
                     </LinearLayout>
                 </HorizontalScrollView>
             </LinearLayout>
         </com.google.android.material.appbar.AppBarLayout>
 
+        <!-- Счетчик -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -188,6 +179,7 @@
                 android:textSize="13sp" />
         </LinearLayout>
 
+        <!-- Основной контент -->
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
@@ -201,6 +193,7 @@
                 android:padding="8dp"
                 android:visibility="visible" />
 
+            <!-- Пустое состояние -->
             <LinearLayout
                 android:id="@+id/emptyState"
                 android:layout_width="match_parent"
@@ -253,6 +246,7 @@
                 android:visibility="gone" />
         </FrameLayout>
 
+        <!-- Bottom Navigation -->
         <com.google.android.material.bottomnavigation.BottomNavigationView
             android:id="@+id/bottomNavigationView"
             android:layout_width="match_parent"
@@ -265,6 +259,7 @@
             app:menu="@menu/bottom_navigation" />
     </LinearLayout>
 
+    <!-- Navigation Drawer -->
     <com.google.android.material.navigation.NavigationView
         android:id="@+id/navigationView"
         android:layout_width="wrap_content"

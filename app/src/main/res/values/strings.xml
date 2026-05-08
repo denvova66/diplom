@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">SwagBuyCar</string>
+    <string name="app_name">КупиКолёса</string>
     <string name="search_hint">Марка, модель, цена</string>
     <string name="profile">Профиль</string>
     <string name="add_car">Добавить автомобиль</string>
@@ -26,4 +26,8 @@
     <string name="add_first_ad">Добавьте первое объявление\nили измените фильтры поиска</string>
     <string name="sort_default">По умолчанию ▼</string>
     <string name="found_cars">Найдено %d авто</string>
+    <string name="my_ads">Мои объявления</string>
+    <string name="messages_title">Сообщения</string>
+    <string name="reviews_title">Отзывы</string>
+    <string name="orders_title">Мои заказы</string>
 </resources>

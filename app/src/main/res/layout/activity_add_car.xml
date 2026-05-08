@@ -1,13 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="#F5F5F5">
 
-    <!-- Тулбар -->
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
@@ -30,7 +28,6 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- Блок фото -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -40,38 +37,24 @@
                 android:textStyle="bold"
                 android:layout_marginBottom="12dp" />
 
-            <FrameLayout
+            <!-- Контейнер для фото -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/imagesRecyclerView"
                 android:layout_width="match_parent"
-                android:layout_height="240dp"
-                android:layout_marginBottom="8dp">
-
-                <androidx.cardview.widget.CardView
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    app:cardCornerRadius="12dp"
-                    app:cardElevation="2dp">
-
-                    <ImageView
-                        android:id="@+id/carImageView"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:scaleType="centerCrop"
-                        android:src="@drawable/ic_add_photo"
-                        android:background="#F5F5F5" />
-                </androidx.cardview.widget.CardView>
-            </FrameLayout>
+                android:layout_height="200dp"
+                android:layout_marginBottom="8dp"
+                android:background="@drawable/dashed_border" />
 
             <Button
                 android:id="@+id/addImageButton"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
-                android:text="Добавить фото"
+                android:text="Добавить фото (можно несколько)"
                 android:textColor="@color/red"
                 android:background="@drawable/button_outline_red"
                 android:layout_marginBottom="24dp"
                 android:textSize="14sp" />
 
-            <!-- Основная информация -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -95,102 +78,57 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Марка"
-                        android:textSize="12sp"
-                        android:textColor="#999999"
-                        android:layout_marginBottom="4dp" />
-
                     <EditText
                         android:id="@+id/brandEditText"
                         android:layout_width="match_parent"
                         android:layout_height="48dp"
                         android:background="@drawable/edit_text_bg"
-                        android:hint="Например: BMW"
+                        android:hint="Марка (например: BMW)"
                         android:textSize="16sp"
                         android:paddingHorizontal="12dp"
-                        android:layout_marginBottom="16dp" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Модель"
-                        android:textSize="12sp"
-                        android:textColor="#999999"
-                        android:layout_marginBottom="4dp" />
+                        android:layout_marginBottom="12dp" />
 
                     <EditText
                         android:id="@+id/modelEditText"
                         android:layout_width="match_parent"
                         android:layout_height="48dp"
                         android:background="@drawable/edit_text_bg"
-                        android:hint="Например: X5"
+                        android:hint="Модель (например: X5)"
                         android:textSize="16sp"
                         android:paddingHorizontal="12dp"
-                        android:layout_marginBottom="16dp" />
+                        android:layout_marginBottom="12dp" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal">
 
-                        <LinearLayout
+                        <EditText
+                            android:id="@+id/yearEditText"
                             android:layout_width="0dp"
-                            android:layout_height="wrap_content"
+                            android:layout_height="48dp"
                             android:layout_weight="1"
-                            android:orientation="vertical"
-                            android:layout_marginEnd="8dp">
+                            android:background="@drawable/edit_text_bg"
+                            android:hint="Год"
+                            android:textSize="16sp"
+                            android:inputType="number"
+                            android:paddingHorizontal="12dp"
+                            android:layout_marginEnd="8dp" />
 
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Год"
-                                android:textSize="12sp"
-                                android:textColor="#999999"
-                                android:layout_marginBottom="4dp" />
-
-                            <EditText
-                                android:id="@+id/yearEditText"
-                                android:layout_width="match_parent"
-                                android:layout_height="48dp"
-                                android:background="@drawable/edit_text_bg"
-                                android:hint="2024"
-                                android:textSize="16sp"
-                                android:inputType="number"
-                                android:paddingHorizontal="12dp" />
-                        </LinearLayout>
-
-                        <LinearLayout
+                        <EditText
+                            android:id="@+id/priceEditText"
                             android:layout_width="0dp"
-                            android:layout_height="wrap_content"
+                            android:layout_height="48dp"
                             android:layout_weight="1"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Цена, ₽"
-                                android:textSize="12sp"
-                                android:textColor="#999999"
-                                android:layout_marginBottom="4dp" />
-
-                            <EditText
-                                android:id="@+id/priceEditText"
-                                android:layout_width="match_parent"
-                                android:layout_height="48dp"
-                                android:background="@drawable/edit_text_bg"
-                                android:hint="2 500 000"
-                                android:textSize="16sp"
-                                android:inputType="number"
-                                android:paddingHorizontal="12dp" />
-                        </LinearLayout>
+                            android:background="@drawable/edit_text_bg"
+                            android:hint="Цена, ₽"
+                            android:textSize="16sp"
+                            android:inputType="number"
+                            android:paddingHorizontal="12dp" />
                     </LinearLayout>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- Технические характеристики -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -219,61 +157,32 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal">
 
-                        <LinearLayout
+                        <EditText
+                            android:id="@+id/mileageEditText"
                             android:layout_width="0dp"
-                            android:layout_height="wrap_content"
+                            android:layout_height="48dp"
                             android:layout_weight="1"
-                            android:orientation="vertical"
-                            android:layout_marginEnd="8dp">
+                            android:background="@drawable/edit_text_bg"
+                            android:hint="Пробег, км"
+                            android:textSize="16sp"
+                            android:inputType="number"
+                            android:paddingHorizontal="12dp"
+                            android:layout_marginEnd="8dp" />
 
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Пробег, км"
-                                android:textSize="12sp"
-                                android:textColor="#999999"
-                                android:layout_marginBottom="4dp" />
-
-                            <EditText
-                                android:id="@+id/mileageEditText"
-                                android:layout_width="match_parent"
-                                android:layout_height="48dp"
-                                android:background="@drawable/edit_text_bg"
-                                android:hint="45 000"
-                                android:textSize="16sp"
-                                android:inputType="number"
-                                android:paddingHorizontal="12dp" />
-                        </LinearLayout>
-
-                        <LinearLayout
+                        <EditText
+                            android:id="@+id/engineEditText"
                             android:layout_width="0dp"
-                            android:layout_height="wrap_content"
+                            android:layout_height="48dp"
                             android:layout_weight="1"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Объем, л"
-                                android:textSize="12sp"
-                                android:textColor="#999999"
-                                android:layout_marginBottom="4dp" />
-
-                            <EditText
-                                android:id="@+id/engineEditText"
-                                android:layout_width="match_parent"
-                                android:layout_height="48dp"
-                                android:background="@drawable/edit_text_bg"
-                                android:hint="3.0"
-                                android:textSize="16sp"
-                                android:inputType="numberDecimal"
-                                android:paddingHorizontal="12dp" />
-                        </LinearLayout>
+                            android:background="@drawable/edit_text_bg"
+                            android:hint="Объем, л"
+                            android:textSize="16sp"
+                            android:inputType="numberDecimal"
+                            android:paddingHorizontal="12dp" />
                     </LinearLayout>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- Описание -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -302,14 +211,12 @@
                     android:padding="16dp" />
             </androidx.cardview.widget.CardView>
 
-            <!-- Отступ для кнопки -->
             <View
                 android:layout_width="match_parent"
                 android:layout_height="80dp" />
         </LinearLayout>
     </ScrollView>
 
-    <!-- Фиксированная кнопка снизу -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

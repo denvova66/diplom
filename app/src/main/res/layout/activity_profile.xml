@@ -26,6 +26,7 @@
             android:orientation="vertical"
             android:padding="16dp">
 
+            <!-- Карточка пользователя -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -41,14 +42,14 @@
                     android:orientation="vertical"
                     android:padding="24dp">
 
-                    <ImageView
+                    <de.hdodenhof.circleimageview.CircleImageView
                         android:id="@+id/userAvatar"
                         android:layout_width="96dp"
                         android:layout_height="96dp"
                         android:layout_marginBottom="16dp"
-                        android:background="@drawable/circle_white"
-                        android:padding="24dp"
-                        android:src="@drawable/ic_person" />
+                        android:src="@drawable/ic_person"
+                        app:civ_border_color="#F5F5F5"
+                        app:civ_border_width="3dp" />
 
                     <TextView
                         android:id="@+id/userNameText"
@@ -75,12 +76,13 @@
                         android:layout_marginTop="16dp"
                         android:background="@drawable/button_outline_red"
                         android:paddingHorizontal="24dp"
-                        android:text="Редактировать"
+                        android:text="Изменить фото"
                         android:textColor="@color/red"
                         android:textSize="13sp" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
+            <!-- Меню -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -103,17 +105,11 @@
                         android:orientation="horizontal"
                         android:paddingHorizontal="16dp">
 
-                        <ImageView
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:layout_marginEnd="16dp"
-                            android:src="@drawable/ic_add" />
-
                         <TextView
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="Мои объявления"
+                            android:text="📋 Мои объявления"
                             android:textColor="@color/black"
                             android:textSize="16sp" />
 
@@ -138,17 +134,11 @@
                         android:orientation="horizontal"
                         android:paddingHorizontal="16dp">
 
-                        <ImageView
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:layout_marginEnd="16dp"
-                            android:src="@drawable/ic_favorite" />
-
                         <TextView
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="Избранное"
+                            android:text="❤️ Избранное"
                             android:textColor="@color/black"
                             android:textSize="16sp" />
 
@@ -165,7 +155,7 @@
                         android:background="#F0F0F0" />
 
                     <LinearLayout
-                        android:id="@+id/settingsButton"
+                        android:id="@+id/chatsButton"
                         android:layout_width="match_parent"
                         android:layout_height="56dp"
                         android:background="?attr/selectableItemBackground"
@@ -173,17 +163,40 @@
                         android:orientation="horizontal"
                         android:paddingHorizontal="16dp">
 
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="💬 Сообщения"
+                            android:textColor="@color/black"
+                            android:textSize="16sp" />
+
                         <ImageView
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:layout_marginEnd="16dp"
-                            android:src="@drawable/ic_settings" />
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:alpha="0.3"
+                            android:src="@drawable/ic_chevron_right" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="#F0F0F0" />
+
+                    <LinearLayout
+                        android:id="@+id/ordersButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:background="?attr/selectableItemBackground"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="16dp">
 
                         <TextView
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="Настройки"
+                            android:text="📦 Мои заказы"
                             android:textColor="@color/black"
                             android:textSize="16sp" />
 
@@ -196,6 +209,7 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
+            <!-- Кнопка выхода -->
             <Button
                 android:id="@+id/logoutButton"
                 android:layout_width="match_parent"

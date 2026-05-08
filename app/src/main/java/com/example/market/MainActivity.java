@@ -164,18 +164,19 @@ public class MainActivity extends AppCompatActivity {
         if (bottomNavigationView != null) {
             bottomNavigationView.setOnItemSelectedListener(item -> {
                 int itemId = item.getItemId();
-                if (itemId == R.id.navigation_home) return true;
-                else if (itemId == R.id.navigation_search) {
-                    if (searchEditText != null) searchEditText.requestFocus();
+                if (itemId == R.id.navigation_home) {
+                    return true;
+                } else if (itemId == R.id.navigation_chats) {
+                    startActivity(new Intent(MainActivity.this, ChatListActivity.class));
                     return true;
                 } else if (itemId == R.id.navigation_add) {
-                    startActivity(new Intent(this, AddCarActivity.class));
+                    startActivity(new Intent(MainActivity.this, AddCarActivity.class));
                     return true;
                 } else if (itemId == R.id.navigation_favorites) {
-                    startActivity(new Intent(this, FavoritesActivity.class));
+                    startActivity(new Intent(MainActivity.this, FavoritesActivity.class));
                     return true;
                 } else if (itemId == R.id.navigation_profile) {
-                    startActivity(new Intent(this, ProfileActivity.class));
+                    startActivity(new Intent(MainActivity.this, ProfileActivity.class));
                     return true;
                 }
                 return false;

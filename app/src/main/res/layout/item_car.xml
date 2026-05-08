@@ -6,13 +6,16 @@
     android:layout_margin="6dp"
     app:cardBackgroundColor="@color/white"
     app:cardCornerRadius="16dp"
-    app:cardElevation="2dp">
+    app:cardElevation="2dp"
+    app:cardPreventCornerOverlap="true"
+    app:cardUseCompatPadding="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
+        <!-- Фото -->
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="200dp">
@@ -30,6 +33,7 @@
                 android:layout_gravity="bottom"
                 android:background="@drawable/gradient_bottom" />
 
+            <!-- Кнопка избранного -->
             <ImageButton
                 android:id="@+id/favoriteButton"
                 android:layout_width="40dp"
@@ -42,33 +46,37 @@
                 android:src="@drawable/ic_favorite" />
         </FrameLayout>
 
+        <!-- Информация -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:padding="12dp">
 
+            <!-- Цена -->
             <TextView
                 android:id="@+id/priceText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="4dp"
                 android:text="2 500 000 ₽"
-                android:textColor="@color/black"
+                android:textColor="@color/red"
                 android:textSize="20sp"
                 android:textStyle="bold" />
 
+            <!-- Название -->
             <TextView
                 android:id="@+id/brandModelText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
+                android:layout_marginBottom="6dp"
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:text="BMW X5, 2020"
                 android:textColor="#666666"
                 android:textSize="14sp" />
 
+            <!-- Параметры в одну строку -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -81,12 +89,12 @@
                     android:layout_height="wrap_content"
                     android:text="2020"
                     android:textColor="#999999"
-                    android:textSize="13sp" />
+                    android:textSize="12sp" />
 
                 <View
                     android:layout_width="3dp"
                     android:layout_height="3dp"
-                    android:layout_marginHorizontal="8dp"
+                    android:layout_marginHorizontal="6dp"
                     android:background="#CCCCCC" />
 
                 <TextView
@@ -95,12 +103,12 @@
                     android:layout_height="wrap_content"
                     android:text="45 000 км"
                     android:textColor="#999999"
-                    android:textSize="13sp" />
+                    android:textSize="12sp" />
 
                 <View
                     android:layout_width="3dp"
                     android:layout_height="3dp"
-                    android:layout_marginHorizontal="8dp"
+                    android:layout_marginHorizontal="6dp"
                     android:background="#CCCCCC" />
 
                 <TextView
@@ -109,7 +117,7 @@
                     android:layout_height="wrap_content"
                     android:text="3.0 л"
                     android:textColor="#999999"
-                    android:textSize="13sp" />
+                    android:textSize="12sp" />
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>
