@@ -1,18 +1,21 @@
 package com.example.market;
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
@@ -25,15 +28,18 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import de.hdodenhof.circleimageview.CircleImageView;
+
 public class ChatActivity extends AppCompatActivity {
     private RecyclerView messagesRecycler;
     private EditText messageInput;
-    private Button sendButton;
+    private ImageView sendButton;
     private MessageAdapter adapter;
     private List<Message> messages;
     private FirebaseFirestore db;
     private String chatId;
     private String currentUserId;
+    private String otherUserPhone;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,14 +48,14 @@ public class ChatActivity extends AppCompatActivity {
 
         db = FirebaseFirestore.getInstance();
         currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+
         chatId = getIntent().getStringExtra("chatId");
         String userName = getIntent().getStringExtra("userName");
+        otherUserPhone = getIntent().getStringExtra("userPhone");
+        String userAvatar = getIntent().getStringExtra("userAvatar");
+        boolean userOnline = getIntent().getBooleanExtra("userOnline", false);
 
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        if (toolbar != null) {
-            toolbar.setTitle(userName != null ? userName : "Чат");
-            toolbar.setNavigationOnClickListener(v -> finish());
-        }
+        setupHeader(userName, otherUserPhone, userAvatar, userOnline);
 
         messagesRecycler = findViewById(R.id.messagesRecycler);
         messageInput = findViewById(R.id.messageInput);
@@ -58,14 +64,67 @@ public class ChatActivity extends AppCompatActivity {
         messages = new ArrayList<>();
         adapter = new MessageAdapter(messages, currentUserId);
 
-        messagesRecycler.setLayoutManager(new LinearLayoutManager(this));
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this);
+        layoutManager.setStackFromEnd(true);
+        messagesRecycler.setLayoutManager(layoutManager);
         messagesRecycler.setAdapter(adapter);
 
         sendButton.setOnClickListener(v -> sendMessage());
+
+        ImageView backButton = findViewById(R.id.backButton);
+        if (backButton != null) {
+            backButton.setOnClickListener(v -> finish());
+        }
+
         loadMessages();
     }
 
+    private void setupHeader(String userName, String phone, String avatar, boolean online) {
+        TextView nameText = findViewById(R.id.chatUserName);
+        TextView statusText = findViewById(R.id.onlineStatus);
+        TextView phoneText = findViewById(R.id.userPhoneText);
+        CircleImageView avatarView = findViewById(R.id.chatAvatar);
+        ImageView callButton = findViewById(R.id.callButton);
+
+        if (nameText != null) {
+            nameText.setText(userName != null ? userName : "Пользователь");
+        }
+
+        if (statusText != null) {
+            statusText.setText(online ? "в сети" : "не в сети");
+            statusText.setTextColor(online ? 0xFF4CAF50 : 0xFF999999);
+        }
+
+        if (phoneText != null && phone != null && !phone.isEmpty()) {
+            phoneText.setText(phone);
+            phoneText.setVisibility(View.VISIBLE);
+        }
+
+        if (avatarView != null && avatar != null && !avatar.isEmpty()) {
+            Glide.with(this)
+                    .load(avatar)
+                    .placeholder(R.drawable.ic_person)
+                    .circleCrop()
+                    .into(avatarView);
+        }
+
+        if (callButton != null && phone != null && !phone.isEmpty()) {
+            callButton.setVisibility(View.VISIBLE);
+            callButton.setOnClickListener(v -> {
+                if (otherUserPhone != null && !otherUserPhone.isEmpty()) {
+                    Intent intent = new Intent(Intent.ACTION_DIAL);
+                    intent.setData(Uri.parse("tel:" + otherUserPhone));
+                    startActivity(intent);
+                } else {
+                    Toast.makeText(this, "Номер телефона не указан", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+    }
+
     private void loadMessages() {
+        if (chatId == null) return;
+
         db.collection("chats").document(chatId)
                 .collection("messages")
                 .orderBy("timestamp", Query.Direction.ASCENDING)
@@ -75,7 +134,10 @@ public class ChatActivity extends AppCompatActivity {
                     messages.clear();
                     if (value != null) {
                         for (var doc : value) {
-                            Message msg = doc.toObject(Message.class);
+                            Message msg = new Message();
+                            msg.setSenderId(doc.getString("senderId"));
+                            msg.setText(doc.getString("text"));
+                            msg.setTimestamp(doc.getDate("timestamp"));
                             messages.add(msg);
                         }
                     }
@@ -88,7 +150,7 @@ public class ChatActivity extends AppCompatActivity {
 
     private void sendMessage() {
         String text = messageInput.getText().toString().trim();
-        if (text.isEmpty()) return;
+        if (text.isEmpty() || chatId == null) return;
 
         Map<String, Object> msgData = new HashMap<>();
         msgData.put("senderId", currentUserId);
@@ -102,11 +164,13 @@ public class ChatActivity extends AppCompatActivity {
                 .addOnSuccessListener(doc -> {
                     messageInput.setText("");
 
-                    // Обновляем последнее сообщение в чате
                     Map<String, Object> updateData = new HashMap<>();
                     updateData.put("lastMessage", text);
                     updateData.put("lastMessageTime", new Date());
                     db.collection("chats").document(chatId).update(updateData);
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Ошибка отправки", Toast.LENGTH_SHORT).show();
                 });
     }
 
@@ -121,24 +185,28 @@ public class ChatActivity extends AppCompatActivity {
 
         @Override
         public int getItemViewType(int position) {
-            return msgList.get(position).getSenderId().equals(userId) ? 1 : 0;
+            Message msg = msgList.get(position);
+            return (msg.getSenderId() != null && msg.getSenderId().equals(userId)) ? 1 : 0;
         }
 
         @Override
         public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
             LayoutInflater inflater = LayoutInflater.from(parent.getContext());
-            View v;
-            if (viewType == 1) {
-                v = inflater.inflate(R.layout.item_message_sent, parent, false);
-            } else {
-                v = inflater.inflate(R.layout.item_message_received, parent, false);
-            }
+            View v = viewType == 1 ?
+                    inflater.inflate(R.layout.item_message_sent, parent, false) :
+                    inflater.inflate(R.layout.item_message_received, parent, false);
             return new ViewHolder(v);
         }
 
         @Override
         public void onBindViewHolder(ViewHolder holder, int pos) {
-            holder.messageText.setText(msgList.get(pos).getText());
+            Message msg = msgList.get(pos);
+            holder.messageText.setText(msg.getText());
+
+            if (msg.getTimestamp() != null) {
+                SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+                holder.messageTime.setText(sdf.format(msg.getTimestamp()));
+            }
         }
 
         @Override
@@ -147,10 +215,11 @@ public class ChatActivity extends AppCompatActivity {
         }
 
         class ViewHolder extends RecyclerView.ViewHolder {
-            TextView messageText;
+            TextView messageText, messageTime;
             ViewHolder(View v) {
                 super(v);
                 messageText = v.findViewById(R.id.messageText);
+                messageTime = v.findViewById(R.id.messageTime);
             }
         }
     }

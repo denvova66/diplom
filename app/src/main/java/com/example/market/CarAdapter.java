@@ -2,8 +2,6 @@ package com.example.market;
 
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,7 +14,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
-import com.google.firebase.auth.FirebaseAuth;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -25,12 +23,10 @@ import java.util.List;
 public class CarAdapter extends RecyclerView.Adapter<CarAdapter.CarViewHolder> {
     private List<Car> carList;
     private Context context;
-    private FirebaseAuth mAuth;
 
     public CarAdapter(List<Car> carList, Context context) {
         this.carList = carList != null ? carList : new ArrayList<>();
         this.context = context;
-        this.mAuth = FirebaseAuth.getInstance();
     }
 
     @NonNull
@@ -109,10 +105,21 @@ public class CarAdapter extends RecyclerView.Adapter<CarAdapter.CarViewHolder> {
             loadCarImage(car);
 
             if (favoriteButton != null) {
-                updateFavoriteIcon(car);
+                favoriteButton.setImageResource(
+                        car.isFavorite() ? R.drawable.ic_favorite_filled : R.drawable.ic_favorite
+                );
                 favoriteButton.setOnClickListener(v -> {
-                    toggleFavorite(car);
-                    updateFavoriteIcon(car);
+                    if (car.isFavorite()) {
+                        Favorites.removeFavoriteCar(car);
+                        car.setFavorite(false);
+                        favoriteButton.setImageResource(R.drawable.ic_favorite);
+                        Toast.makeText(context, "Удалено из избранного", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Favorites.addFavoriteCar(car);
+                        car.setFavorite(true);
+                        favoriteButton.setImageResource(R.drawable.ic_favorite_filled);
+                        Toast.makeText(context, "Добавлено в избранное", Toast.LENGTH_SHORT).show();
+                    }
                 });
             }
         }
@@ -120,10 +127,22 @@ public class CarAdapter extends RecyclerView.Adapter<CarAdapter.CarViewHolder> {
         private void loadCarImage(Car car) {
             if (carImage == null) return;
 
-            String imageUrl = car.getImageUrl();
-            if (imageUrl != null && !imageUrl.isEmpty()) {
-                if (imageUrl.startsWith("/") || imageUrl.startsWith("file://")) {
-                    // Локальный файл
+            List<String> images = car.getImageUrls();
+            String imageUrl = (images != null && !images.isEmpty()) ? images.get(0) : null;
+
+            if (imageUrl != null && !imageUrl.isEmpty() && !imageUrl.equals("placeholder")) {
+                // Загружаем из Firebase Storage (https://...)
+                if (imageUrl.startsWith("https://firebasestorage.googleapis.com")) {
+                    Glide.with(context)
+                            .load(imageUrl)
+                            .placeholder(R.drawable.ic_car_placeholder)
+                            .error(R.drawable.ic_car_placeholder)
+                            .diskCacheStrategy(DiskCacheStrategy.ALL)
+                            .centerCrop()
+                            .into(carImage);
+                }
+                // Локальный файл
+                else if (imageUrl.startsWith("/") || imageUrl.startsWith("file://")) {
                     String path = imageUrl.replace("file://", "");
                     File imageFile = new File(path);
                     if (imageFile.exists()) {
@@ -131,49 +150,32 @@ public class CarAdapter extends RecyclerView.Adapter<CarAdapter.CarViewHolder> {
                                 .load(imageFile)
                                 .placeholder(R.drawable.ic_car_placeholder)
                                 .error(R.drawable.ic_car_placeholder)
+                                .diskCacheStrategy(DiskCacheStrategy.ALL)
                                 .centerCrop()
                                 .into(carImage);
                     } else {
                         carImage.setImageResource(R.drawable.ic_car_placeholder);
                     }
-                } else if (imageUrl.startsWith("local://")) {
+                }
+                // Локальный ресурс
+                else if (imageUrl.startsWith("local://")) {
                     String imageName = imageUrl.replace("local://", "");
                     int resourceId = context.getResources().getIdentifier(
                             imageName, "drawable", context.getPackageName());
                     carImage.setImageResource(resourceId != 0 ? resourceId : R.drawable.ic_car_placeholder);
-                } else {
-                    // URL из Firebase
+                }
+                // Другие URL
+                else {
                     Glide.with(context)
                             .load(imageUrl)
                             .placeholder(R.drawable.ic_car_placeholder)
                             .error(R.drawable.ic_car_placeholder)
+                            .diskCacheStrategy(DiskCacheStrategy.ALL)
                             .centerCrop()
                             .into(carImage);
                 }
             } else {
                 carImage.setImageResource(R.drawable.ic_car_placeholder);
-            }
-        }
-
-        private void updateFavoriteIcon(Car car) {
-            if (favoriteButton != null && car != null) {
-                favoriteButton.setImageResource(
-                        car.isFavorite() ? R.drawable.ic_favorite_filled : R.drawable.ic_favorite
-                );
-            }
-        }
-
-        private void toggleFavorite(Car car) {
-            if (car == null) return;
-
-            if (car.isFavorite()) {
-                Favorites.removeFavoriteCar(car);
-                car.setFavorite(false);
-                Toast.makeText(context, "Удалено из избранного", Toast.LENGTH_SHORT).show();
-            } else {
-                Favorites.addFavoriteCar(car);
-                car.setFavorite(true);
-                Toast.makeText(context, "Добавлено в избранное", Toast.LENGTH_SHORT).show();
             }
         }
     }

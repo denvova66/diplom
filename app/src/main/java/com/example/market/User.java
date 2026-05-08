@@ -10,8 +10,13 @@ public class User implements Serializable {
     private String middleName;
     private String avatarUrl;
     private String phoneNumber;
+    private boolean online;
+    private long lastSeen;
 
-    public User() {}
+    public User() {
+        this.online = false;
+        this.lastSeen = 0;
+    }
 
     public User(String id, String email, String firstName, String lastName, String middleName) {
         this.id = id;
@@ -19,6 +24,8 @@ public class User implements Serializable {
         this.firstName = firstName;
         this.lastName = lastName;
         this.middleName = middleName;
+        this.online = false;
+        this.lastSeen = 0;
     }
 
     public String getId() { return id; }
@@ -41,6 +48,12 @@ public class User implements Serializable {
 
     public String getPhoneNumber() { return phoneNumber; }
     public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
+
+    public boolean isOnline() { return online; }
+    public void setOnline(boolean online) { this.online = online; }
+
+    public long getLastSeen() { return lastSeen; }
+    public void setLastSeen(long lastSeen) { this.lastSeen = lastSeen; }
 
     public String getFullName() {
         StringBuilder fullName = new StringBuilder();

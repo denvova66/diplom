@@ -1,6 +1,7 @@
 package com.example.market;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -17,8 +18,10 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.io.File;
@@ -34,6 +37,7 @@ public class CarDetailActivity extends AppCompatActivity {
     private Car currentCar;
     private FirebaseFirestore db;
     private FirebaseAuth mAuth;
+    private String sellerPhone = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,6 +53,7 @@ public class CarDetailActivity extends AppCompatActivity {
 
         if (currentCar != null) {
             ViewHistoryManager.addToHistory(currentCar);
+            loadSellerPhone();
         }
 
         Toolbar toolbar = findViewById(R.id.toolbar);
@@ -76,7 +81,6 @@ public class CarDetailActivity extends AppCompatActivity {
         Button favoriteButton = findViewById(R.id.favoriteButton);
         Button deleteButton = findViewById(R.id.deleteButton);
         Button reviewsButton = findViewById(R.id.reviewsButton);
-        Button orderButton = findViewById(R.id.orderButton);
 
         if (editButton != null) {
             editButton.setOnClickListener(v -> {
@@ -112,10 +116,24 @@ public class CarDetailActivity extends AppCompatActivity {
                 startActivity(intent);
             });
         }
+    }
 
-        if (orderButton != null) {
-            orderButton.setOnClickListener(v -> createOrder());
-        }
+    private void loadSellerPhone() {
+        String sellerId = currentCar.getOwnerId();
+        if (sellerId == null || sellerId.isEmpty()) return;
+
+        db.collection("users").document(sellerId).get()
+                .addOnSuccessListener(doc -> {
+                    if (doc.exists()) {
+                        sellerPhone = doc.getString("phoneNumber");
+                        if (sellerPhone == null) sellerPhone = "";
+
+                        Button contactButton = findViewById(R.id.contactButton);
+                        if (contactButton != null && !sellerPhone.isEmpty()) {
+                            contactButton.setText("Позвонить: " + sellerPhone);
+                        }
+                    }
+                });
     }
 
     private void displayCarDetails() {
@@ -128,10 +146,11 @@ public class CarDetailActivity extends AppCompatActivity {
             descriptionText.setText(currentCar.getDescription() != null ?
                     currentCar.getDescription() : "Описание отсутствует");
 
+            // Настройка изображений
+            CarImageAdapter adapter = new CarImageAdapter(currentCar.getImageUrls());
             LinearLayoutManager layoutManager = new LinearLayoutManager(this,
                     LinearLayoutManager.HORIZONTAL, false);
             carImagesRecyclerView.setLayoutManager(layoutManager);
-            CarImageAdapter adapter = new CarImageAdapter(currentCar.getImageUrls());
             carImagesRecyclerView.setAdapter(adapter);
 
             Button favoriteButton = findViewById(R.id.favoriteButton);
@@ -139,19 +158,17 @@ public class CarDetailActivity extends AppCompatActivity {
                 updateFavoriteButton(favoriteButton);
             }
 
+            // Права на редактирование
             FirebaseUser currentUser = mAuth.getCurrentUser();
             Button editBtn = findViewById(R.id.editButton);
             Button deleteBtn = findViewById(R.id.deleteButton);
-            Button orderBtn = findViewById(R.id.orderButton);
 
             if (currentUser != null && currentUser.getUid().equals(currentCar.getOwnerId())) {
                 if (editBtn != null) editBtn.setVisibility(View.VISIBLE);
                 if (deleteBtn != null) deleteBtn.setVisibility(View.VISIBLE);
-                if (orderBtn != null) orderBtn.setVisibility(View.GONE);
             } else {
                 if (editBtn != null) editBtn.setVisibility(View.GONE);
                 if (deleteBtn != null) deleteBtn.setVisibility(View.GONE);
-                if (orderBtn != null) orderBtn.setVisibility(View.VISIBLE);
             }
         }
     }
@@ -163,7 +180,13 @@ public class CarDetailActivity extends AppCompatActivity {
     }
 
     private void callSeller() {
-        Toast.makeText(this, "Функция звонка", Toast.LENGTH_SHORT).show();
+        if (sellerPhone != null && !sellerPhone.isEmpty()) {
+            Intent intent = new Intent(Intent.ACTION_DIAL);
+            intent.setData(Uri.parse("tel:" + sellerPhone));
+            startActivity(intent);
+        } else {
+            Toast.makeText(this, "Номер телефона продавца не указан", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void toggleFavorite() {
@@ -211,7 +234,6 @@ public class CarDetailActivity extends AppCompatActivity {
                 .show();
     }
 
-    // ========== ЧАТ ==========
     private void startChat() {
         if (currentCar == null) return;
 
@@ -272,51 +294,11 @@ public class CarDetailActivity extends AppCompatActivity {
         Intent intent = new Intent(CarDetailActivity.this, ChatActivity.class);
         intent.putExtra("chatId", chatId);
         intent.putExtra("userName", currentCar.getFullName());
+        intent.putExtra("userPhone", sellerPhone);
         startActivity(intent);
     }
 
-    // ========== ЗАКАЗ ==========
-    private void createOrder() {
-        if (currentCar == null) return;
-
-        String currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-        String sellerId = currentCar.getOwnerId();
-
-        if (sellerId == null || sellerId.isEmpty() || sellerId.equals(currentUserId)) {
-            Toast.makeText(this, "Это ваше объявление", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Подтверждение заказа")
-                .setMessage("Вы хотите купить " + currentCar.getFullName() + " за " +
-                        String.format("%,.0f ₽", currentCar.getPrice()) + "?")
-                .setPositiveButton("Подтвердить", (dialog, which) -> {
-                    Map<String, Object> orderData = new HashMap<>();
-                    orderData.put("carId", currentCar.getId());
-                    orderData.put("buyerId", currentUserId);
-                    orderData.put("sellerId", sellerId);
-                    orderData.put("price", currentCar.getPrice());
-                    orderData.put("status", "pending");
-                    orderData.put("createdAt", new Date());
-
-                    db.collection("orders").add(orderData)
-                            .addOnSuccessListener(doc -> {
-                                Toast.makeText(this, "Заказ создан! ID: " + doc.getId(),
-                                        Toast.LENGTH_LONG).show();
-
-                                Intent intent = new Intent(CarDetailActivity.this, OrdersActivity.class);
-                                startActivity(intent);
-                            })
-                            .addOnFailureListener(e -> {
-                                Toast.makeText(this, "Ошибка создания заказа", Toast.LENGTH_SHORT).show();
-                            });
-                })
-                .setNegativeButton("Отмена", null)
-                .show();
-    }
-
-    // ========== Адаптер изображений ==========
+    // Адаптер изображений
     private class CarImageAdapter extends RecyclerView.Adapter<CarImageAdapter.ImageViewHolder> {
         private List<String> imageUrls;
 
@@ -335,18 +317,29 @@ public class CarDetailActivity extends AppCompatActivity {
         @Override
         public void onBindViewHolder(@NonNull ImageViewHolder holder, int position) {
             String imageUrl = imageUrls.get(position);
+
             ViewGroup.LayoutParams params = holder.imageView.getLayoutParams();
             params.height = 280;
             holder.imageView.setLayoutParams(params);
             holder.imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
 
-            if (imageUrl != null && !imageUrl.isEmpty()) {
-                if (imageUrl.startsWith("/")) {
-                    File imageFile = new File(imageUrl);
+            if (imageUrl != null && !imageUrl.isEmpty() && !imageUrl.equals("placeholder")) {
+                if (imageUrl.startsWith("https://firebasestorage.googleapis.com")) {
+                    Glide.with(CarDetailActivity.this)
+                            .load(imageUrl)
+                            .placeholder(R.drawable.ic_car_placeholder)
+                            .error(R.drawable.ic_car_placeholder)
+                            .diskCacheStrategy(DiskCacheStrategy.ALL)
+                            .centerCrop()
+                            .into(holder.imageView);
+                } else if (imageUrl.startsWith("/") || imageUrl.startsWith("file://")) {
+                    String path = imageUrl.replace("file://", "");
+                    File imageFile = new File(path);
                     if (imageFile.exists()) {
                         Glide.with(CarDetailActivity.this)
                                 .load(imageFile)
                                 .placeholder(R.drawable.ic_car_placeholder)
+                                .centerCrop()
                                 .into(holder.imageView);
                     } else {
                         holder.imageView.setImageResource(R.drawable.ic_car_placeholder);
@@ -359,6 +352,8 @@ public class CarDetailActivity extends AppCompatActivity {
                     Glide.with(CarDetailActivity.this)
                             .load(imageUrl)
                             .placeholder(R.drawable.ic_car_placeholder)
+                            .error(R.drawable.ic_car_placeholder)
+                            .centerCrop()
                             .into(holder.imageView);
                 }
             } else {

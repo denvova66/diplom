@@ -39,13 +39,13 @@ public class UserManager {
             return;
         }
 
-        // Сначала создаем базового пользователя из Firebase Auth
         User basicUser = new User();
         basicUser.setId(firebaseUser.getUid());
         basicUser.setEmail(firebaseUser.getEmail());
         basicUser.setFirstName("");
         basicUser.setLastName("");
         basicUser.setMiddleName("");
+        basicUser.setOnline(true);
 
         FirebaseFirestore.getInstance()
                 .collection("users")
@@ -56,19 +56,34 @@ public class UserManager {
                         DocumentSnapshot doc = task.getResult();
                         User user = documentToUser(doc);
                         setCurrentUser(user);
+
+                        // Обновляем онлайн статус
+                        updateOnlineStatus(firebaseUser.getUid(), true);
+
                         if (callback != null) callback.onUserLoaded(user);
                     } else {
-                        // Если пользователя нет в Firestore, используем базового
                         setCurrentUser(basicUser);
+                        updateOnlineStatus(firebaseUser.getUid(), true);
                         if (callback != null) callback.onUserLoaded(basicUser);
-
-                        // Логируем ошибку только если это не PERMISSION_DENIED
-                        if (task.getException() != null &&
-                                !task.getException().getMessage().contains("PERMISSION_DENIED")) {
-                            Log.e(TAG, "Error loading user from Firestore", task.getException());
-                        }
                     }
+                })
+                .addOnFailureListener(e -> {
+                    setCurrentUser(basicUser);
+                    if (callback != null) callback.onUserLoaded(basicUser);
                 });
+    }
+
+    private static void updateOnlineStatus(String userId, boolean online) {
+        FirebaseFirestore.getInstance()
+                .collection("users")
+                .document(userId)
+                .update("online", online, "lastSeen", System.currentTimeMillis());
+    }
+
+    public static void setUserOffline() {
+        if (currentUser != null) {
+            updateOnlineStatus(currentUser.getId(), false);
+        }
     }
 
     public static void saveUserToFirestore(User user) {
@@ -113,6 +128,13 @@ public class UserManager {
         user.setMiddleName(doc.getString("middleName"));
         user.setAvatarUrl(doc.getString("avatarUrl"));
         user.setPhoneNumber(doc.getString("phoneNumber"));
+
+        Boolean online = doc.getBoolean("online");
+        user.setOnline(online != null ? online : false);
+
+        Long lastSeen = doc.getLong("lastSeen");
+        user.setLastSeen(lastSeen != null ? lastSeen : 0);
+
         return user;
     }
 
@@ -127,6 +149,8 @@ public class UserManager {
                 userJson.put("middleName", currentUser.getMiddleName() != null ? currentUser.getMiddleName() : "");
                 userJson.put("avatarUrl", currentUser.getAvatarUrl() != null ? currentUser.getAvatarUrl() : "");
                 userJson.put("phoneNumber", currentUser.getPhoneNumber() != null ? currentUser.getPhoneNumber() : "");
+                userJson.put("online", currentUser.isOnline());
+                userJson.put("lastSeen", currentUser.getLastSeen());
 
                 prefs.edit().putString(USER_KEY, userJson.toString()).apply();
             } catch (Exception e) {
@@ -150,6 +174,8 @@ public class UserManager {
                 user.setMiddleName(userJson.optString("middleName"));
                 user.setAvatarUrl(userJson.optString("avatarUrl"));
                 user.setPhoneNumber(userJson.optString("phoneNumber"));
+                user.setOnline(userJson.optBoolean("online", false));
+                user.setLastSeen(userJson.optLong("lastSeen", 0));
                 currentUser = user;
             }
         } catch (Exception e) {
@@ -159,6 +185,9 @@ public class UserManager {
     }
 
     public static void logout() {
+        if (currentUser != null) {
+            updateOnlineStatus(currentUser.getId(), false);
+        }
         currentUser = null;
         if (prefs != null) {
             prefs.edit().remove(USER_KEY).apply();

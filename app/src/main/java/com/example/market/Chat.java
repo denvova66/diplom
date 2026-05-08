@@ -12,6 +12,9 @@ public class Chat implements Serializable {
     private String carId;
     private String otherUserName;
     private String otherUserAvatar;
+    private String otherUserPhone;
+    private boolean otherUserOnline;
+    private long otherUserLastSeen;
 
     public Chat() {}
 
@@ -35,4 +38,13 @@ public class Chat implements Serializable {
 
     public String getOtherUserAvatar() { return otherUserAvatar; }
     public void setOtherUserAvatar(String otherUserAvatar) { this.otherUserAvatar = otherUserAvatar; }
+
+    public String getOtherUserPhone() { return otherUserPhone; }
+    public void setOtherUserPhone(String otherUserPhone) { this.otherUserPhone = otherUserPhone; }
+
+    public boolean isOtherUserOnline() { return otherUserOnline; }
+    public void setOtherUserOnline(boolean otherUserOnline) { this.otherUserOnline = otherUserOnline; }
+
+    public long getOtherUserLastSeen() { return otherUserLastSeen; }
+    public void setOtherUserLastSeen(long otherUserLastSeen) { this.otherUserLastSeen = otherUserLastSeen; }
 }

@@ -4,32 +4,107 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#F5F5F5">
+    android:background="#F0F0F0">
 
-    <androidx.appcompat.widget.Toolbar
-        android:id="@+id/toolbar"
+    <!-- Верхняя панель чата -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         android:background="@color/white"
-        app:elevation="0dp"
-        app:navigationIcon="@drawable/ic_arrow_back"
-        app:title="Чат"
-        app:titleTextColor="@color/black" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="8dp"
+        app:elevation="2dp">
 
+        <ImageView
+            android:id="@+id/backButton"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_arrow_back"
+            android:padding="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless" />
+
+        <de.hdodenhof.circleimageview.CircleImageView
+            android:id="@+id/chatAvatar"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_person"
+            android:layout_marginEnd="10dp" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/chatUserName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Пользователь"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="#1A1A1A"
+                android:maxLines="1" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/onlineStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="в сети"
+                    android:textSize="11sp"
+                    android:textColor="#4CAF50" />
+
+                <View
+                    android:layout_width="3dp"
+                    android:layout_height="3dp"
+                    android:background="#CCCCCC"
+                    android:layout_marginHorizontal="6dp" />
+
+                <TextView
+                    android:id="@+id/userPhoneText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="+79001234567"
+                    android:textSize="11sp"
+                    android:textColor="#888888" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <ImageView
+            android:id="@+id/callButton"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_phone"
+            android:padding="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless" />
+    </LinearLayout>
+
+    <!-- Сообщения -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/messagesRecycler"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:padding="8dp" />
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="8dp"
+        android:clipToPadding="false" />
 
+    <!-- Поле ввода -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:padding="8dp"
         android:background="@color/white"
-        android:gravity="center_vertical">
+        android:gravity="center_vertical"
+        app:elevation="4dp">
 
         <EditText
             android:id="@+id/messageInput"
@@ -38,17 +113,18 @@
             android:layout_weight="1"
             android:background="@drawable/search_bg"
             android:hint="Сообщение..."
-            android:paddingHorizontal="12dp"
-            android:textSize="14sp"
+            android:paddingHorizontal="14dp"
+            android:textSize="15sp"
+            android:maxLines="3"
             android:layout_marginEnd="8dp" />
 
-        <Button
+        <ImageView
             android:id="@+id/sendButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:text="→"
-            android:textColor="@color/white"
-            android:textSize="20sp"
-            android:background="@drawable/button_red" />
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:src="@drawable/ic_send"
+            android:padding="10dp"
+            android:background="@drawable/circle_red"
+            android:layout_gravity="center" />
     </LinearLayout>
 </LinearLayout>

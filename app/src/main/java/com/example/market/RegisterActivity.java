@@ -24,7 +24,7 @@ public class RegisterActivity extends AppCompatActivity {
     private static final String TAG = "RegisterActivity";
 
     private EditText emailEditText, passwordEditText, confirmPasswordEditText;
-    private EditText firstNameEditText, lastNameEditText, middleNameEditText;
+    private EditText firstNameEditText, lastNameEditText, phoneEditText;
     private Button registerButton;
     private ImageButton backButton;
     private ProgressBar progressBar;
@@ -36,6 +36,8 @@ public class RegisterActivity extends AppCompatActivity {
         setContentView(R.layout.activity_register);
 
         mAuth = FirebaseAuth.getInstance();
+        mAuth.getFirebaseAuthSettings().setAppVerificationDisabledForTesting(true);
+
         initViews();
     }
 
@@ -45,7 +47,7 @@ public class RegisterActivity extends AppCompatActivity {
         confirmPasswordEditText = findViewById(R.id.confirmPasswordEditText);
         firstNameEditText = findViewById(R.id.firstNameEditText);
         lastNameEditText = findViewById(R.id.lastNameEditText);
-        middleNameEditText = findViewById(R.id.middleNameEditText);
+        phoneEditText = findViewById(R.id.phoneEditText);
         registerButton = findViewById(R.id.registerButton);
         backButton = findViewById(R.id.backButton);
         progressBar = findViewById(R.id.progressBar);
@@ -65,9 +67,8 @@ public class RegisterActivity extends AppCompatActivity {
         String confirmPassword = confirmPasswordEditText.getText().toString().trim();
         String firstName = firstNameEditText.getText().toString().trim();
         String lastName = lastNameEditText.getText().toString().trim();
-        String middleName = middleNameEditText.getText().toString().trim();
+        String phone = phoneEditText != null ? phoneEditText.getText().toString().trim() : "";
 
-        // Валидация
         if (email.isEmpty() || password.isEmpty() || confirmPassword.isEmpty() ||
                 firstName.isEmpty() || lastName.isEmpty()) {
             Toast.makeText(this, "Заполните все обязательные поля", Toast.LENGTH_SHORT).show();
@@ -89,59 +90,42 @@ public class RegisterActivity extends AppCompatActivity {
             return;
         }
 
-        // Показываем прогресс
         progressBar.setVisibility(View.VISIBLE);
         registerButton.setEnabled(false);
 
         mAuth.createUserWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, task -> {
                     if (task.isSuccessful()) {
-                        // Регистрация успешна
                         FirebaseUser firebaseUser = mAuth.getCurrentUser();
                         if (firebaseUser != null) {
-                            // Создаем пользователя
                             User user = new User();
                             user.setId(firebaseUser.getUid());
                             user.setEmail(email);
                             user.setFirstName(firstName);
                             user.setLastName(lastName);
-                            user.setMiddleName(middleName);
+                            user.setPhoneNumber(phone);
+                            user.setOnline(true);
 
-                            // Сохраняем локально
                             UserManager.setCurrentUser(user);
-
-                            // Сохраняем в Firestore (не блокирует переход)
                             saveUserToFirestore(user);
 
                             Toast.makeText(RegisterActivity.this,
                                     "Регистрация успешна!", Toast.LENGTH_SHORT).show();
 
-                            // Сразу переходим на главную
                             Intent intent = new Intent(RegisterActivity.this, MainActivity.class);
                             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                             startActivity(intent);
                             finish();
                         }
                     } else {
-                        // Ошибка
                         progressBar.setVisibility(View.GONE);
                         registerButton.setEnabled(true);
 
                         String errorMessage = "Ошибка регистрации";
                         if (task.getException() != null) {
-                            String message = task.getException().getMessage();
-                            if (message != null) {
-                                if (message.contains("email address is already in use")) {
-                                    errorMessage = "Этот email уже используется";
-                                } else if (message.contains("network error")) {
-                                    errorMessage = "Ошибка сети. Проверьте подключение к интернету";
-                                } else {
-                                    errorMessage = message;
-                                }
-                            }
+                            errorMessage = task.getException().getMessage();
                         }
                         Toast.makeText(RegisterActivity.this, errorMessage, Toast.LENGTH_LONG).show();
-                        Log.e(TAG, "Registration failed: " + errorMessage);
                     }
                 });
     }
@@ -151,9 +135,10 @@ public class RegisterActivity extends AppCompatActivity {
         userData.put("email", user.getEmail());
         userData.put("firstName", user.getFirstName());
         userData.put("lastName", user.getLastName());
-        userData.put("middleName", user.getMiddleName());
+        userData.put("phoneNumber", user.getPhoneNumber());
         userData.put("avatarUrl", "");
-        userData.put("phoneNumber", "");
+        userData.put("online", true);
+        userData.put("lastSeen", System.currentTimeMillis());
         userData.put("role", "user");
         userData.put("createdAt", new Date());
 
@@ -161,9 +146,7 @@ public class RegisterActivity extends AppCompatActivity {
                 .collection("users")
                 .document(user.getId())
                 .set(userData)
-                .addOnSuccessListener(aVoid ->
-                        Log.d(TAG, "User saved to Firestore"))
-                .addOnFailureListener(e ->
-                        Log.e(TAG, "Error saving user to Firestore: " + e.getMessage()));
+                .addOnSuccessListener(aVoid -> Log.d(TAG, "User saved to Firestore"))
+                .addOnFailureListener(e -> Log.e(TAG, "Error saving user", e));
     }
 }

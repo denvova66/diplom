@@ -15,10 +15,10 @@
         android:padding="12dp"
         android:gravity="center_vertical">
 
-        <ImageView
+        <de.hdodenhof.circleimageview.CircleImageView
             android:id="@+id/chatAvatar"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
             android:src="@drawable/ic_person"
             android:layout_marginEnd="12dp" />
 
@@ -36,6 +36,15 @@
                 android:textSize="15sp"
                 android:textStyle="bold"
                 android:textColor="@color/black" />
+
+            <TextView
+                android:id="@+id/onlineStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="В сети"
+                android:textSize="11sp"
+                android:textColor="#4CAF50"
+                android:layout_marginBottom="4dp" />
 
             <TextView
                 android:id="@+id/chatLastMessage"

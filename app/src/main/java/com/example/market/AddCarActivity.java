@@ -26,6 +26,7 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -44,9 +45,10 @@ public class AddCarActivity extends AppCompatActivity {
     private ProgressBar progressBar;
     private List<Uri> selectedImages = new ArrayList<>();
     private List<String> uploadedImageUrls = new ArrayList<>();
-    private ImageAdapter imageAdapter;
+    private ImagePreviewAdapter imagePreviewAdapter;
     private FirebaseFirestore db;
     private FirebaseStorage storage;
+    private int uploadCount = 0;
 
     private ActivityResultLauncher<String[]> imagePickerLauncher;
 
@@ -71,7 +73,7 @@ public class AddCarActivity extends AppCompatActivity {
                     if (uris != null && !uris.isEmpty()) {
                         selectedImages.clear();
                         selectedImages.addAll(uris);
-                        imageAdapter.notifyDataSetChanged();
+                        imagePreviewAdapter.notifyDataSetChanged();
                     }
                 }
         );
@@ -97,9 +99,9 @@ public class AddCarActivity extends AppCompatActivity {
             toolbar.setNavigationOnClickListener(v -> finish());
         }
 
-        imageAdapter = new ImageAdapter(selectedImages);
+        imagePreviewAdapter = new ImagePreviewAdapter(selectedImages);
         imagesRecyclerView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
-        imagesRecyclerView.setAdapter(imageAdapter);
+        imagesRecyclerView.setAdapter(imagePreviewAdapter);
 
         addImageButton.setOnClickListener(v -> imagePickerLauncher.launch(new String[]{"image/*"}));
         submitButton.setOnClickListener(v -> addCar());
@@ -127,35 +129,38 @@ public class AddCarActivity extends AppCompatActivity {
 
         progressBar.setVisibility(View.VISIBLE);
         submitButton.setEnabled(false);
-
-        // Загружаем все фото
         uploadedImageUrls.clear();
+        uploadCount = 0;
+
         uploadImages(0);
     }
 
     private void uploadImages(int index) {
         if (index >= selectedImages.size()) {
-            // Все фото загружены, сохраняем авто
             saveCarToFirebase();
             return;
         }
 
         Uri imageUri = selectedImages.get(index);
-        StorageReference imageRef = storage.getReference()
-                .child("cars/" + UUID.randomUUID().toString() + ".jpg");
+        String fileName = "cars/" + UUID.randomUUID().toString() + ".jpg";
+        StorageReference imageRef = storage.getReference().child(fileName);
 
-        imageRef.putFile(imageUri)
-                .addOnSuccessListener(taskSnapshot -> {
-                    imageRef.getDownloadUrl().addOnSuccessListener(uri -> {
-                        uploadedImageUrls.add(uri.toString());
-                        uploadImages(index + 1);
-                    });
-                })
-                .addOnFailureListener(e -> {
-                    // Даже если одно фото не загрузилось, продолжаем
-                    uploadedImageUrls.add("");
-                    uploadImages(index + 1);
-                });
+        UploadTask uploadTask = imageRef.putFile(imageUri);
+        uploadTask.addOnSuccessListener(taskSnapshot -> {
+            imageRef.getDownloadUrl().addOnSuccessListener(uri -> {
+                uploadedImageUrls.add(uri.toString());
+                Log.d(TAG, "Image uploaded: " + uri.toString());
+                uploadImages(index + 1);
+            }).addOnFailureListener(e -> {
+                Log.e(TAG, "Failed to get download URL", e);
+                uploadedImageUrls.add("placeholder");
+                uploadImages(index + 1);
+            });
+        }).addOnFailureListener(e -> {
+            Log.e(TAG, "Failed to upload image", e);
+            uploadedImageUrls.add("placeholder");
+            uploadImages(index + 1);
+        });
     }
 
     private void saveCarToFirebase() {
@@ -185,25 +190,10 @@ public class AddCarActivity extends AppCompatActivity {
             db.collection("cars")
                     .add(carData)
                     .addOnSuccessListener(documentReference -> {
+                        Log.d(TAG, "Car saved to Firebase: " + documentReference.getId());
+
                         progressBar.setVisibility(View.GONE);
                         submitButton.setEnabled(true);
-
-                        // Также сохраняем локально
-                        Car car = new Car();
-                        car.setId(documentReference.getId());
-                        car.setBrand(carData.get("brand").toString());
-                        car.setModel(carData.get("model").toString());
-                        car.setYear((int)carData.get("year"));
-                        car.setMileage((int)carData.get("mileage"));
-                        car.setEngineVolume((double)carData.get("engineVolume"));
-                        car.setPrice((double)carData.get("price"));
-                        car.setDescription(carData.get("description").toString());
-                        car.setOwnerId(user.getUid());
-                        car.setImageUrls(uploadedImageUrls);
-                        car.setCreatedAt(new Date());
-                        car.setLocal(false);
-
-                        LocalCarManager.addCar(car);
 
                         Toast.makeText(this, "Объявление опубликовано!", Toast.LENGTH_SHORT).show();
 
@@ -215,7 +205,7 @@ public class AddCarActivity extends AppCompatActivity {
                     .addOnFailureListener(e -> {
                         progressBar.setVisibility(View.GONE);
                         submitButton.setEnabled(true);
-                        Toast.makeText(this, "Ошибка: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, "Ошибка сохранения: " + e.getMessage(), Toast.LENGTH_LONG).show();
                         Log.e(TAG, "Error saving car", e);
                     });
 
@@ -226,11 +216,11 @@ public class AddCarActivity extends AppCompatActivity {
         }
     }
 
-    // Адаптер для отображения выбранных фото
-    private class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> {
+    // Адаптер предпросмотра выбранных фото
+    private class ImagePreviewAdapter extends RecyclerView.Adapter<ImagePreviewAdapter.ViewHolder> {
         private List<Uri> images;
 
-        ImageAdapter(List<Uri> images) {
+        ImagePreviewAdapter(List<Uri> images) {
             this.images = images;
         }
 
@@ -247,6 +237,12 @@ public class AddCarActivity extends AppCompatActivity {
                     .load(images.get(pos))
                     .centerCrop()
                     .into(holder.imageView);
+
+            holder.removeButton.setOnClickListener(v -> {
+                images.remove(pos);
+                notifyItemRemoved(pos);
+                notifyItemRangeChanged(pos, images.size());
+            });
         }
 
         @Override
@@ -256,9 +252,11 @@ public class AddCarActivity extends AppCompatActivity {
 
         class ViewHolder extends RecyclerView.ViewHolder {
             ImageView imageView;
+            ImageView removeButton;
             ViewHolder(View v) {
                 super(v);
                 imageView = v.findViewById(R.id.selectedImage);
+                removeButton = v.findViewById(R.id.removeImageButton);
             }
         }
     }
