@@ -6,7 +6,6 @@ import android.os.Handler;
 import android.os.Looper;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -18,7 +17,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -52,12 +50,13 @@ public class MainActivity extends AppCompatActivity {
     private FirebaseFirestore db;
     private BottomNavigationView bottomNavigationView;
 
-    private Chip chipBrand, chipModel, chipYear, chipPrice, chipMileage;
+    private Chip chipBrand, chipModel, chipBody, chipYear, chipPrice, chipMileage;
     private View emptyState, loadingState;
     private TextView countText;
 
     private String selectedBrand = null;
     private String selectedModel = null;
+    private String selectedBody = null;
     private Integer selectedYearFrom = null;
     private Integer selectedYearTo = null;
     private Double selectedPriceFrom = null;
@@ -102,6 +101,7 @@ public class MainActivity extends AppCompatActivity {
 
         chipBrand = findViewById(R.id.chipBrand);
         chipModel = findViewById(R.id.chipModel);
+        chipBody = findViewById(R.id.chipBody);
         chipYear = findViewById(R.id.chipYear);
         chipPrice = findViewById(R.id.chipPrice);
         chipMileage = findViewById(R.id.chipMileage);
@@ -115,9 +115,6 @@ public class MainActivity extends AppCompatActivity {
             addFirstCarButton.setOnClickListener(v ->
                     startActivity(new Intent(MainActivity.this, AddCarActivity.class)));
         }
-
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        if (toolbar != null) toolbar.setTitle("");
 
         if (carsRecyclerView != null) {
             carsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -155,6 +152,10 @@ public class MainActivity extends AppCompatActivity {
 
         if (chipBrand != null) chipBrand.setOnClickListener(v -> showBrandBottomSheet());
         if (chipModel != null) chipModel.setOnClickListener(v -> showModelBottomSheet());
+        if (chipBody != null) chipBody.setOnClickListener(v -> {
+            if (selectedModel != null) showBodyBottomSheet();
+            else showModelBottomSheet();
+        });
         if (chipYear != null) chipYear.setOnClickListener(v -> showYearBottomSheet());
         if (chipPrice != null) chipPrice.setOnClickListener(v -> showPriceBottomSheet());
         if (chipMileage != null) chipMileage.setOnClickListener(v -> showMileageBottomSheet());
@@ -164,19 +165,18 @@ public class MainActivity extends AppCompatActivity {
         if (bottomNavigationView != null) {
             bottomNavigationView.setOnItemSelectedListener(item -> {
                 int itemId = item.getItemId();
-                if (itemId == R.id.navigation_home) {
-                    return true;
-                } else if (itemId == R.id.navigation_chats) {
-                    startActivity(new Intent(MainActivity.this, ChatListActivity.class));
+                if (itemId == R.id.navigation_home) return true;
+                else if (itemId == R.id.navigation_chats) {
+                    startActivity(new Intent(this, ChatListActivity.class));
                     return true;
                 } else if (itemId == R.id.navigation_add) {
-                    startActivity(new Intent(MainActivity.this, AddCarActivity.class));
+                    startActivity(new Intent(this, AddCarActivity.class));
                     return true;
                 } else if (itemId == R.id.navigation_favorites) {
-                    startActivity(new Intent(MainActivity.this, FavoritesActivity.class));
+                    startActivity(new Intent(this, FavoritesActivity.class));
                     return true;
                 } else if (itemId == R.id.navigation_profile) {
-                    startActivity(new Intent(MainActivity.this, ProfileActivity.class));
+                    startActivity(new Intent(this, ProfileActivity.class));
                     return true;
                 }
                 return false;
@@ -189,26 +189,19 @@ public class MainActivity extends AppCompatActivity {
         if (navigationView != null) {
             navigationView.setNavigationItemSelectedListener(item -> {
                 int itemId = item.getItemId();
-                if (itemId == R.id.nav_profile) {
-                    startActivity(new Intent(this, ProfileActivity.class));
-                } else if (itemId == R.id.nav_favorites) {
-                    startActivity(new Intent(this, FavoritesActivity.class));
-                } else if (itemId == R.id.nav_chats) {
-                    startActivity(new Intent(this, ChatListActivity.class));
-                } else if (itemId == R.id.nav_history) {
-                    startActivity(new Intent(this, ViewHistoryActivity.class));
-                } else if (itemId == R.id.nav_share) {
-                    shareApp();
-                } else if (itemId == R.id.nav_logout) {
-                    logout();
-                }
+                if (itemId == R.id.nav_profile) startActivity(new Intent(this, ProfileActivity.class));
+                else if (itemId == R.id.nav_favorites) startActivity(new Intent(this, FavoritesActivity.class));
+                else if (itemId == R.id.nav_chats) startActivity(new Intent(this, ChatListActivity.class));
+                else if (itemId == R.id.nav_history) startActivity(new Intent(this, ViewHistoryActivity.class));
+                else if (itemId == R.id.nav_share) shareApp();
+                else if (itemId == R.id.nav_logout) logout();
                 if (drawerLayout != null) drawerLayout.closeDrawer(navigationView);
                 return true;
             });
         }
     }
 
-    // BRAND BOTTOM SHEET
+    // ==================== BRAND BOTTOM SHEET ====================
     private void showBrandBottomSheet() {
         BottomSheetDialog dialog = new BottomSheetDialog(this);
         View view = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_brand, null);
@@ -218,7 +211,7 @@ public class MainActivity extends AppCompatActivity {
         com.google.android.flexbox.FlexboxLayout popularContainer = view.findViewById(R.id.popularBrandsContainer);
 
         String[] popularBrands = {"BMW", "Mercedes-Benz", "Audi", "Toyota", "Kia",
-                "Hyundai", "Volkswagen", "Lada", "Renault", "Nissan"};
+                "Hyundai", "Volkswagen", "Lada (ВАЗ)", "Renault", "Nissan"};
 
         if (popularContainer != null) {
             popularContainer.removeAllViews();
@@ -229,10 +222,13 @@ public class MainActivity extends AppCompatActivity {
                 chip.setOnClickListener(v -> {
                     selectedBrand = brand;
                     selectedModel = null;
+                    selectedBody = null;
                     chipBrand.setText(brand);
                     chipBrand.setChipBackgroundColorResource(R.color.red_light);
                     chipModel.setText("Модель ▾");
                     chipModel.setChipBackgroundColorResource(android.R.color.transparent);
+                    chipBody.setText("Кузов ▾");
+                    chipBody.setChipBackgroundColorResource(android.R.color.transparent);
                     dialog.dismiss();
                     applyFilters();
                 });
@@ -241,14 +237,16 @@ public class MainActivity extends AppCompatActivity {
         }
 
         List<String> allBrandsList = BrandData.getAllBrands();
-
         BrandAdapter allAdapter = new BrandAdapter(allBrandsList.toArray(new String[0]), brand -> {
             selectedBrand = brand;
             selectedModel = null;
+            selectedBody = null;
             chipBrand.setText(brand);
             chipBrand.setChipBackgroundColorResource(R.color.red_light);
             chipModel.setText("Модель ▾");
             chipModel.setChipBackgroundColorResource(android.R.color.transparent);
+            chipBody.setText("Кузов ▾");
+            chipBody.setChipBackgroundColorResource(android.R.color.transparent);
             dialog.dismiss();
             applyFilters();
         });
@@ -261,10 +259,13 @@ public class MainActivity extends AppCompatActivity {
         view.findViewById(R.id.resetBrandButton).setOnClickListener(v -> {
             selectedBrand = null;
             selectedModel = null;
+            selectedBody = null;
             chipBrand.setText("Марка ▾");
             chipBrand.setChipBackgroundColorResource(android.R.color.transparent);
             chipModel.setText("Модель ▾");
             chipModel.setChipBackgroundColorResource(android.R.color.transparent);
+            chipBody.setText("Кузов ▾");
+            chipBody.setChipBackgroundColorResource(android.R.color.transparent);
             dialog.dismiss();
             applyFilters();
         });
@@ -286,42 +287,73 @@ public class MainActivity extends AppCompatActivity {
         dialog.show();
     }
 
-    // MODEL BOTTOM SHEET
+    // ==================== MODEL BOTTOM SHEET ====================
     private void showModelBottomSheet() {
-        BottomSheetDialog dialog = new BottomSheetDialog(this);
-        View view = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_model, null);
+        if (selectedBrand == null) {
+            Toast.makeText(this, "Сначала выберите марку", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
+        BottomSheetDialog dialog = new BottomSheetDialog(this);
+        View view = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_simple_list, null);
         TextView title = view.findViewById(R.id.titleText);
         RecyclerView recycler = view.findViewById(R.id.simpleRecycler);
 
-        if (selectedBrand != null) {
-            title.setText("Модели " + selectedBrand);
-        } else {
-            title.setText("Сначала выберите марку");
-        }
+        title.setText("Выберите модель " + selectedBrand);
 
-        List<String> modelsList = BrandData.getModelsForBrand(selectedBrand);
-        if (modelsList.isEmpty()) {
-            for (Car car : allCars) {
-                if (car != null && car.getModel() != null && !car.getModel().isEmpty()) {
-                    if (selectedBrand == null || car.getBrand().equals(selectedBrand)) {
-                        if (!modelsList.contains(car.getModel())) modelsList.add(car.getModel());
-                    }
-                }
-            }
-            Collections.sort(modelsList);
-        }
-        modelsList.add(0, "Все модели");
+        List<String> models = BrandData.getModelNames(selectedBrand);
+        models.add(0, "Все модели");
 
-        SimpleListAdapter adapter = new SimpleListAdapter(modelsList, item -> {
+        SimpleListAdapter adapter = new SimpleListAdapter(models, item -> {
             if (item.equals("Все модели")) {
                 selectedModel = null;
+                selectedBody = null;
                 chipModel.setText("Модель ▾");
                 chipModel.setChipBackgroundColorResource(android.R.color.transparent);
+                chipBody.setText("Кузов ▾");
+                chipBody.setChipBackgroundColorResource(android.R.color.transparent);
+                dialog.dismiss();
+                applyFilters();
             } else {
                 selectedModel = item;
                 chipModel.setText(item);
                 chipModel.setChipBackgroundColorResource(R.color.red_light);
+                dialog.dismiss();
+                showBodyBottomSheet();
+            }
+        });
+
+        if (recycler != null) {
+            recycler.setLayoutManager(new LinearLayoutManager(this));
+            recycler.setAdapter(adapter);
+        }
+        dialog.setContentView(view);
+        dialog.show();
+    }
+
+    // ==================== BODY BOTTOM SHEET ====================
+    private void showBodyBottomSheet() {
+        if (selectedBrand == null || selectedModel == null) return;
+
+        BottomSheetDialog dialog = new BottomSheetDialog(this);
+        View view = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_simple_list, null);
+        TextView title = view.findViewById(R.id.titleText);
+        RecyclerView recycler = view.findViewById(R.id.simpleRecycler);
+
+        title.setText(selectedModel + " - выберите кузов");
+
+        List<String> bodies = BrandData.getBodiesForModel(selectedBrand, selectedModel);
+        bodies.add(0, "Все кузова");
+
+        SimpleListAdapter adapter = new SimpleListAdapter(bodies, item -> {
+            if (item.equals("Все кузова")) {
+                selectedBody = null;
+                chipBody.setText("Кузов ▾");
+                chipBody.setChipBackgroundColorResource(android.R.color.transparent);
+            } else {
+                selectedBody = item;
+                chipBody.setText(item);
+                chipBody.setChipBackgroundColorResource(R.color.red_light);
             }
             dialog.dismiss();
             applyFilters();
@@ -335,11 +367,10 @@ public class MainActivity extends AppCompatActivity {
         dialog.show();
     }
 
-    // YEAR BOTTOM SHEET
+    // ==================== YEAR BOTTOM SHEET ====================
     private void showYearBottomSheet() {
         BottomSheetDialog dialog = new BottomSheetDialog(this);
         View view = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_year, null);
-
         RecyclerView fromRecycler = view.findViewById(R.id.yearFromRecycler);
         RecyclerView toRecycler = view.findViewById(R.id.yearToRecycler);
         Button applyButton = view.findViewById(R.id.applyYearButton);
@@ -356,14 +387,8 @@ public class MainActivity extends AppCompatActivity {
             selectedYearTo = year.equals("Любой") ? null : Integer.parseInt(year);
         });
 
-        if (fromRecycler != null) {
-            fromRecycler.setLayoutManager(new LinearLayoutManager(this));
-            fromRecycler.setAdapter(fromAdapter);
-        }
-        if (toRecycler != null) {
-            toRecycler.setLayoutManager(new LinearLayoutManager(this));
-            toRecycler.setAdapter(toAdapter);
-        }
+        if (fromRecycler != null) { fromRecycler.setLayoutManager(new LinearLayoutManager(this)); fromRecycler.setAdapter(fromAdapter); }
+        if (toRecycler != null) { toRecycler.setLayoutManager(new LinearLayoutManager(this)); toRecycler.setAdapter(toAdapter); }
         if (applyButton != null) {
             applyButton.setOnClickListener(v -> {
                 if (selectedYearFrom == null && selectedYearTo == null) {
@@ -387,11 +412,10 @@ public class MainActivity extends AppCompatActivity {
         dialog.show();
     }
 
-    // PRICE BOTTOM SHEET
+    // ==================== PRICE BOTTOM SHEET ====================
     private void showPriceBottomSheet() {
         BottomSheetDialog dialog = new BottomSheetDialog(this);
         View view = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_price, null);
-
         EditText fromEdit = view.findViewById(R.id.priceFromEditText);
         EditText toEdit = view.findViewById(R.id.priceToEditText);
         SeekBar seekBar = view.findViewById(R.id.priceSeekBar);
@@ -400,19 +424,17 @@ public class MainActivity extends AppCompatActivity {
         if (seekBar != null) {
             seekBar.setMax(10000000);
             seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-                @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                    if (toEdit != null) toEdit.setText(String.valueOf(progress));
-                }
-                @Override public void onStartTrackingTouch(SeekBar seekBar) {}
-                @Override public void onStopTrackingTouch(SeekBar seekBar) {}
+                @Override public void onProgressChanged(SeekBar s, int p, boolean f) { if (toEdit != null) toEdit.setText(String.valueOf(p)); }
+                @Override public void onStartTrackingTouch(SeekBar s) {}
+                @Override public void onStopTrackingTouch(SeekBar s) {}
             });
         }
         if (applyButton != null) {
             applyButton.setOnClickListener(v -> {
-                String fromStr = fromEdit != null ? fromEdit.getText().toString() : "";
-                String toStr = toEdit != null ? toEdit.getText().toString() : "";
-                selectedPriceFrom = fromStr.isEmpty() ? null : Double.parseDouble(fromStr);
-                selectedPriceTo = toStr.isEmpty() ? null : Double.parseDouble(toStr);
+                String fs = fromEdit != null ? fromEdit.getText().toString() : "";
+                String ts = toEdit != null ? toEdit.getText().toString() : "";
+                selectedPriceFrom = fs.isEmpty() ? null : Double.parseDouble(fs);
+                selectedPriceTo = ts.isEmpty() ? null : Double.parseDouble(ts);
                 if (selectedPriceFrom == null && selectedPriceTo == null) {
                     chipPrice.setText("Цена ▾");
                     chipPrice.setChipBackgroundColorResource(android.R.color.transparent);
@@ -428,7 +450,7 @@ public class MainActivity extends AppCompatActivity {
         dialog.show();
     }
 
-    // MILEAGE BOTTOM SHEET
+    // ==================== MILEAGE BOTTOM SHEET ====================
     private void showMileageBottomSheet() {
         BottomSheetDialog dialog = new BottomSheetDialog(this);
         View view = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_mileage, null);
@@ -454,10 +476,7 @@ public class MainActivity extends AppCompatActivity {
             dialog.dismiss();
             applyFilters();
         });
-        if (recycler != null) {
-            recycler.setLayoutManager(new LinearLayoutManager(this));
-            recycler.setAdapter(adapter);
-        }
+        if (recycler != null) { recycler.setLayoutManager(new LinearLayoutManager(this)); recycler.setAdapter(adapter); }
         dialog.setContentView(view);
         dialog.show();
     }
@@ -495,6 +514,7 @@ public class MainActivity extends AppCompatActivity {
             boolean matches = searchText.isEmpty() || car.getFullName().toLowerCase().contains(searchText) || String.valueOf((int)car.getPrice()).contains(searchText);
             if (selectedBrand != null && !car.getBrand().equalsIgnoreCase(selectedBrand)) matches = false;
             if (selectedModel != null && !car.getModel().equalsIgnoreCase(selectedModel)) matches = false;
+            if (selectedBody != null && !car.getModel().contains(selectedBody)) matches = false;
             if (selectedYearFrom != null && car.getYear() < selectedYearFrom) matches = false;
             if (selectedYearTo != null && car.getYear() > selectedYearTo) matches = false;
             if (selectedPriceFrom != null && car.getPrice() < selectedPriceFrom) matches = false;
@@ -550,7 +570,7 @@ public class MainActivity extends AppCompatActivity {
         if (header == null) return;
         TextView name = header.findViewById(R.id.userNameText);
         TextView email = header.findViewById(R.id.userEmailText);
-        if (name != null) name.setText(user.getFullName() != null && !user.getFullName().isEmpty() ? user.getFullName() : "Пользователь");
+        if (name != null) name.setText(user.getFullName() != null && !user.getFullName().trim().isEmpty() ? user.getFullName() : "Пользователь");
         if (email != null) email.setText(user.getEmail() != null ? user.getEmail() : "");
     }
 
@@ -564,8 +584,6 @@ public class MainActivity extends AppCompatActivity {
 
     private void showLoading(boolean show) {
         if (loadingState != null) loadingState.setVisibility(show ? View.VISIBLE : View.GONE);
-        if (carsRecyclerView != null && show) carsRecyclerView.setVisibility(View.GONE);
-        if (emptyState != null && show) emptyState.setVisibility(View.GONE);
     }
 
     @SuppressWarnings("unchecked")
@@ -589,7 +607,7 @@ public class MainActivity extends AppCompatActivity {
             Date d = doc.getDate("createdAt"); if (d != null) car.setCreatedAt(d);
             car.setFavorite(Favorites.isFavorite(car));
             return car;
-        } catch (Exception e) { return null; }
+        } catch (Exception ex) { return null; }
     }
 
     private boolean containsCar(List<Car> cars, Car target) {
@@ -607,6 +625,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void logout() {
+        UserManager.setUserOffline();
         new androidx.appcompat.app.AlertDialog.Builder(this)
                 .setTitle("Выход").setMessage("Вы уверены?")
                 .setPositiveButton("Выйти", (d, w) -> {
@@ -622,7 +641,7 @@ public class MainActivity extends AppCompatActivity {
         if (bottomNavigationView != null) bottomNavigationView.setSelectedItemId(R.id.navigation_home);
     }
 
-    // АДАПТЕРЫ
+    // ==================== АДАПТЕРЫ ====================
     class BrandAdapter extends RecyclerView.Adapter<BrandAdapter.ViewHolder> {
         private String[] items;
         private OnItemClickListener listener;
@@ -630,8 +649,7 @@ public class MainActivity extends AppCompatActivity {
         BrandAdapter(String[] items, OnItemClickListener listener) { this.items = items; this.listener = listener; }
         void updateData(String[] newItems) { this.items = newItems; notifyDataSetChanged(); }
         @Override public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-            View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_brand_list, parent, false);
-            return new ViewHolder(v);
+            return new ViewHolder(LayoutInflater.from(parent.getContext()).inflate(R.layout.item_brand_list, parent, false));
         }
         @Override public void onBindViewHolder(ViewHolder holder, int pos) {
             holder.text.setText(items[pos]);
@@ -650,8 +668,7 @@ public class MainActivity extends AppCompatActivity {
         interface OnItemClick { void onClick(String item); }
         SimpleListAdapter(List<String> items, OnItemClick listener) { this.items = items; this.listener = listener; }
         @Override public VH onCreateViewHolder(ViewGroup p, int t) {
-            View v = LayoutInflater.from(p.getContext()).inflate(android.R.layout.simple_list_item_1, p, false);
-            return new VH(v);
+            return new VH(LayoutInflater.from(p.getContext()).inflate(android.R.layout.simple_list_item_1, p, false));
         }
         @Override public void onBindViewHolder(VH h, int pos) {
             h.text.setText(items.get(pos));

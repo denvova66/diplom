@@ -5,7 +5,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
-import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -17,18 +16,19 @@ import androidx.appcompat.widget.Toolbar;
 import com.bumptech.glide.Glide;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.storage.FirebaseStorage;
-import com.google.firebase.storage.StorageReference;
+import com.google.firebase.firestore.FirebaseFirestore;
 
-import java.util.UUID;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+
+import de.hdodenhof.circleimageview.CircleImageView;
 
 public class ProfileActivity extends AppCompatActivity {
     private static final int PICK_IMAGE_REQUEST = 1;
-    private static final String TAG = "ProfileActivity";
 
-    private ImageView userAvatar;
+    private CircleImageView userAvatar;
     private ProgressBar progressBar;
-    private Uri avatarUri;
     private User currentUser;
 
     @Override
@@ -81,11 +81,9 @@ public class ProfileActivity extends AppCompatActivity {
             });
         }
 
-        View ordersButton = findViewById(R.id.ordersButton);
-        if (ordersButton != null) {
-            ordersButton.setOnClickListener(v -> {
-                startActivity(new Intent(ProfileActivity.this, OrdersActivity.class));
-            });
+        View supportButton = findViewById(R.id.supportButton);
+        if (supportButton != null) {
+            supportButton.setOnClickListener(v -> openSupportChat());
         }
 
         Button logoutButton = findViewById(R.id.logoutButton);
@@ -117,20 +115,26 @@ public class ProfileActivity extends AppCompatActivity {
 
         if (userNameText != null) {
             String fullName = currentUser.getFullName();
-            userNameText.setText(fullName != null && !fullName.isEmpty() ? fullName : "Пользователь");
+            userNameText.setText(fullName != null && !fullName.trim().isEmpty() ? fullName : "Пользователь");
         }
         if (userEmailText != null) {
             userEmailText.setText(currentUser.getEmail() != null ? currentUser.getEmail() : "");
         }
 
+        // Загружаем аватар локально
         if (userAvatar != null && currentUser.getAvatarUrl() != null
                 && !currentUser.getAvatarUrl().isEmpty()) {
-            Glide.with(this)
-                    .load(currentUser.getAvatarUrl())
-                    .placeholder(R.drawable.ic_person)
-                    .error(R.drawable.ic_person)
-                    .circleCrop()
-                    .into(userAvatar);
+            File avatarFile = new File(currentUser.getAvatarUrl());
+            if (avatarFile.exists()) {
+                Glide.with(this)
+                        .load(avatarFile)
+                        .placeholder(R.drawable.ic_person)
+                        .error(R.drawable.ic_person)
+                        .circleCrop()
+                        .into(userAvatar);
+            } else {
+                userAvatar.setImageResource(R.drawable.ic_person);
+            }
         }
     }
 
@@ -145,52 +149,71 @@ public class ProfileActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode,
                                     @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+
         if (requestCode == PICK_IMAGE_REQUEST && resultCode == RESULT_OK
                 && data != null && data.getData() != null) {
-            avatarUri = data.getData();
-            if (userAvatar != null) {
+
+            if (progressBar != null) progressBar.setVisibility(View.VISIBLE);
+
+            try {
+                InputStream inputStream = getContentResolver().openInputStream(data.getData());
+                if (inputStream == null) {
+                    Toast.makeText(this, "Ошибка открытия файла", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                // Создаем папку для аватаров если её нет
+                File avatarsDir = new File(getFilesDir(), "avatars");
+                if (!avatarsDir.exists()) {
+                    avatarsDir.mkdirs();
+                }
+
+                // Сохраняем аватар локально
+                String fileName = "avatar_" + currentUser.getId() + ".jpg";
+                File avatarFile = new File(avatarsDir, fileName);
+
+                FileOutputStream outputStream = new FileOutputStream(avatarFile);
+                byte[] buffer = new byte[4096];
+                int bytesRead;
+                while ((bytesRead = inputStream.read(buffer)) != -1) {
+                    outputStream.write(buffer, 0, bytesRead);
+                }
+
+                inputStream.close();
+                outputStream.close();
+
+                // Сохраняем путь в Firestore и локально
+                String avatarPath = avatarFile.getAbsolutePath();
+                UserManager.updateUserAvatar(avatarPath);
+
+                // Отображаем новый аватар
                 Glide.with(this)
-                        .load(avatarUri)
+                        .load(avatarFile)
+                        .placeholder(R.drawable.ic_person)
                         .circleCrop()
                         .into(userAvatar);
+
+                if (progressBar != null) progressBar.setVisibility(View.GONE);
+                Toast.makeText(this, "Аватар обновлен", Toast.LENGTH_SHORT).show();
+
+            } catch (Exception e) {
+                if (progressBar != null) progressBar.setVisibility(View.GONE);
+                Toast.makeText(this, "Ошибка сохранения аватара: " + e.getMessage(),
+                        Toast.LENGTH_SHORT).show();
             }
-            uploadAvatar();
         }
     }
 
-    private void uploadAvatar() {
-        if (avatarUri == null || currentUser == null) return;
-
-        if (progressBar != null) {
-            progressBar.setVisibility(View.VISIBLE);
+    private void openSupportChat() {
+        if (UserManager.isAdmin()) {
+            startActivity(new Intent(ProfileActivity.this, AdminSupportActivity.class));
+        } else {
+            startActivity(new Intent(ProfileActivity.this, SupportChatActivity.class));
         }
-
-        StorageReference storageRef = FirebaseStorage.getInstance().getReference();
-        StorageReference avatarRef = storageRef.child("avatars/"
-                + currentUser.getId() + "_" + UUID.randomUUID().toString() + ".jpg");
-
-        avatarRef.putFile(avatarUri)
-                .addOnSuccessListener(taskSnapshot -> {
-                    avatarRef.getDownloadUrl().addOnSuccessListener(uri -> {
-                        UserManager.updateUserAvatar(uri.toString());
-                        if (progressBar != null) {
-                            progressBar.setVisibility(View.GONE);
-                        }
-                        Toast.makeText(ProfileActivity.this,
-                                "Аватар обновлен", Toast.LENGTH_SHORT).show();
-                    });
-                })
-                .addOnFailureListener(e -> {
-                    if (progressBar != null) {
-                        progressBar.setVisibility(View.GONE);
-                    }
-                    Toast.makeText(ProfileActivity.this,
-                            "Ошибка загрузки: " + e.getMessage(),
-                            Toast.LENGTH_SHORT).show();
-                });
     }
 
     private void logout() {
+        UserManager.setUserOffline();
         new androidx.appcompat.app.AlertDialog.Builder(this)
                 .setTitle("Выход")
                 .setMessage("Вы уверены, что хотите выйти?")

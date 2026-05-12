@@ -6,7 +6,6 @@
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
 
     <application
         android:name=".App"
@@ -18,7 +17,6 @@
         android:usesCleartextTraffic="true"
         android:supportsRtl="true">
 
-        <!-- Экран входа - запускается первым -->
         <activity
             android:name=".LoginActivity"
             android:exported="true"
@@ -30,89 +28,20 @@
             </intent-filter>
         </activity>
 
-        <!-- Главный экран -->
-        <activity
-            android:name=".MainActivity"
-            android:exported="false"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.Market.NoActionBar" />
-
-        <!-- Экран регистрации -->
-        <activity
-            android:name=".RegisterActivity"
-            android:exported="false"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.Market.NoActionBar" />
-
-        <!-- Экран профиля -->
-        <activity
-            android:name=".ProfileActivity"
-            android:exported="false"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.Market.NoActionBar" />
-
-        <!-- Детали автомобиля -->
-        <activity
-            android:name=".CarDetailActivity"
-            android:exported="false"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.Market.NoActionBar" />
-
-        <!-- Добавление автомобиля -->
-        <activity
-            android:name=".AddCarActivity"
-            android:exported="false"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.Market.NoActionBar" />
-
-        <!-- Редактирование автомобиля -->
-        <activity
-            android:name=".EditCarActivity"
-            android:exported="false"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.Market.NoActionBar" />
-
-        <!-- Избранное -->
-        <activity
-            android:name=".FavoritesActivity"
-            android:exported="false"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.Market.NoActionBar" />
-
-        <!-- История просмотров -->
-        <activity
-            android:name=".ViewHistoryActivity"
-            android:exported="false"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.Market.NoActionBar" />
-
-        <!-- Чаты (список) -->
-        <activity
-            android:name=".ChatListActivity"
-            android:exported="false"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.Market.NoActionBar" />
-
-        <!-- Чат (сообщения) -->
-        <activity
-            android:name=".ChatActivity"
-            android:exported="false"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.Market.NoActionBar" />
-
-        <!-- Отзывы -->
-        <activity
-            android:name=".ReviewsActivity"
-            android:exported="false"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.Market.NoActionBar" />
-
-        <!-- Заказы -->
-        <activity
-            android:name=".OrdersActivity"
-            android:exported="false"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.Market.NoActionBar" />
+        <activity android:name=".MainActivity" android:exported="false" android:screenOrientation="portrait" android:theme="@style/Theme.Market.NoActionBar" />
+        <activity android:name=".RegisterActivity" android:exported="false" android:screenOrientation="portrait" android:theme="@style/Theme.Market.NoActionBar" />
+        <activity android:name=".ProfileActivity" android:exported="false" android:screenOrientation="portrait" android:theme="@style/Theme.Market.NoActionBar" />
+        <activity android:name=".CarDetailActivity" android:exported="false" android:screenOrientation="portrait" android:theme="@style/Theme.Market.NoActionBar" />
+        <activity android:name=".AddCarActivity" android:exported="false" android:screenOrientation="portrait" android:theme="@style/Theme.Market.NoActionBar" />
+        <activity android:name=".EditCarActivity" android:exported="false" android:screenOrientation="portrait" android:theme="@style/Theme.Market.NoActionBar" />
+        <activity android:name=".FavoritesActivity" android:exported="false" android:screenOrientation="portrait" android:theme="@style/Theme.Market.NoActionBar" />
+        <activity android:name=".ViewHistoryActivity" android:exported="false" android:screenOrientation="portrait" android:theme="@style/Theme.Market.NoActionBar" />
+        <activity android:name=".ChatListActivity" android:exported="false" android:screenOrientation="portrait" android:theme="@style/Theme.Market.NoActionBar" />
+        <activity android:name=".ChatActivity" android:exported="false" android:screenOrientation="portrait" android:theme="@style/Theme.Market.NoActionBar" />
+        <activity android:name=".ReviewsActivity" android:exported="false" android:screenOrientation="portrait" android:theme="@style/Theme.Market.NoActionBar" />
+        <activity android:name=".SupportChatActivity" android:exported="false" android:screenOrientation="portrait" android:theme="@style/Theme.Market.NoActionBar" />
+        <activity android:name=".AdminSupportActivity" android:exported="false" android:screenOrientation="portrait" android:theme="@style/Theme.Market.NoActionBar" />
+        <activity android:name=".AdminChatActivity" android:exported="false" android:screenOrientation="portrait" android:theme="@style/Theme.Market.NoActionBar" />
 
     </application>
 </manifest>

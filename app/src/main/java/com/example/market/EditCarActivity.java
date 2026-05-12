@@ -3,43 +3,55 @@ package com.example.market;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.storage.FirebaseStorage;
-import com.google.firebase.storage.StorageReference;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 public class EditCarActivity extends AppCompatActivity {
+    private static final String TAG = "EditCarActivity";
+
     private EditText brandEditText, modelEditText, yearEditText, mileageEditText,
             engineEditText, priceEditText, descriptionEditText;
     private Button addImageButton, submitButton;
-    private ImageView carImageView;
+    private RecyclerView imagesRecyclerView;
     private ProgressBar progressBar;
-    private Uri imageUri;
+    private List<Uri> selectedImages = new ArrayList<>();
+    private List<String> savedImagePaths = new ArrayList<>();
+    private ImagePreviewAdapter imagePreviewAdapter;
+    private FirebaseFirestore db;
     private String carId;
     private Car currentCar;
-    private FirebaseFirestore db;
-    private FirebaseStorage storage;
-    private FirebaseAuth mAuth;
+
+    private ActivityResultLauncher<String[]> imagePickerLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,12 +59,28 @@ public class EditCarActivity extends AppCompatActivity {
         setContentView(R.layout.activity_edit_car);
 
         db = FirebaseFirestore.getInstance();
-        storage = FirebaseStorage.getInstance();
-        mAuth = FirebaseAuth.getInstance();
         carId = getIntent().getStringExtra("car_id");
 
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        toolbar.setNavigationOnClickListener(v -> onBackPressed());
+        if (carId == null || carId.isEmpty()) {
+            Toast.makeText(this, "Ошибка: ID автомобиля не указан", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+
+        // Создаем папку для фото
+        File carsDir = new File(getFilesDir(), "car_images");
+        if (!carsDir.exists()) carsDir.mkdirs();
+
+        imagePickerLauncher = registerForActivityResult(
+                new ActivityResultContracts.OpenMultipleDocuments(),
+                uris -> {
+                    if (uris != null && !uris.isEmpty()) {
+                        selectedImages.clear();
+                        selectedImages.addAll(uris);
+                        imagePreviewAdapter.notifyDataSetChanged();
+                    }
+                }
+        );
 
         initViews();
         loadCarDetails();
@@ -68,57 +96,50 @@ public class EditCarActivity extends AppCompatActivity {
         descriptionEditText = findViewById(R.id.descriptionEditText);
         addImageButton = findViewById(R.id.addImageButton);
         submitButton = findViewById(R.id.submitButton);
-        carImageView = findViewById(R.id.carImageView);
+        imagesRecyclerView = findViewById(R.id.imagesRecyclerView);
         progressBar = findViewById(R.id.progressBar);
 
-        addImageButton.setOnClickListener(v -> selectImage());
-        submitButton.setOnClickListener(v -> saveChanges());
-    }
-
-    private void selectImage() {
-        Intent intent = new Intent();
-        intent.setType("image/*");
-        intent.setAction(Intent.ACTION_GET_CONTENT);
-        startActivityForResult(Intent.createChooser(intent, "Select Image"), 1);
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == 1 && resultCode == RESULT_OK && data != null && data.getData() != null) {
-            imageUri = data.getData();
-            carImageView.setImageURI(imageUri);
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        if (toolbar != null) {
+            toolbar.setTitle("Редактировать авто");
+            toolbar.setNavigationOnClickListener(v -> finish());
         }
+
+        imagePreviewAdapter = new ImagePreviewAdapter(selectedImages);
+        imagesRecyclerView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+        imagesRecyclerView.setAdapter(imagePreviewAdapter);
+
+        addImageButton.setOnClickListener(v -> imagePickerLauncher.launch(new String[]{"image/*"}));
+        submitButton.setOnClickListener(v -> saveChanges());
     }
 
     private void loadCarDetails() {
         progressBar.setVisibility(View.VISIBLE);
 
-        if (carId == null) {
-            Toast.makeText(this, "Ошибка: ID автомобиля не указан", Toast.LENGTH_SHORT).show();
-            finish();
-            return;
-        }
-
         db.collection("cars").document(carId)
                 .get()
                 .addOnCompleteListener(task -> {
                     progressBar.setVisibility(View.GONE);
-                    if (task.isSuccessful() && task.getResult() != null) {
+
+                    if (task.isSuccessful() && task.getResult() != null && task.getResult().exists()) {
                         DocumentSnapshot doc = task.getResult();
                         currentCar = documentToCar(doc);
+
                         if (currentCar != null) {
                             displayCarDetails();
                         } else {
-                            Toast.makeText(EditCarActivity.this, "Ошибка загрузки данных автомобиля", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(this, "Ошибка загрузки данных", Toast.LENGTH_SHORT).show();
                             finish();
                         }
                     } else {
-                        Toast.makeText(EditCarActivity.this, "Ошибка загрузки: " +
-                                        (task.getException() != null ? task.getException().getMessage() : "Unknown error"),
-                                Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "Автомобиль не найден", Toast.LENGTH_SHORT).show();
                         finish();
                     }
+                })
+                .addOnFailureListener(e -> {
+                    progressBar.setVisibility(View.GONE);
+                    Toast.makeText(this, "Ошибка загрузки: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    finish();
                 });
     }
 
@@ -129,66 +150,63 @@ public class EditCarActivity extends AppCompatActivity {
             car.setBrand(doc.getString("brand"));
             car.setModel(doc.getString("model"));
 
-            Object yearObj = doc.get("year");
-            if (yearObj instanceof Long) {
-                car.setYear(((Long) yearObj).intValue());
-            } else if (yearObj instanceof Integer) {
-                car.setYear((Integer) yearObj);
-            }
+            Long yearLong = doc.getLong("year");
+            if (yearLong != null) car.setYear(yearLong.intValue());
 
-            Object mileageObj = doc.get("mileage");
-            if (mileageObj instanceof Long) {
-                car.setMileage(((Long) mileageObj).intValue());
-            } else if (mileageObj instanceof Integer) {
-                car.setMileage((Integer) mileageObj);
-            }
+            Long mileageLong = doc.getLong("mileage");
+            if (mileageLong != null) car.setMileage(mileageLong.intValue());
 
-            Object engineObj = doc.get("engineVolume");
-            if (engineObj instanceof Double) {
-                car.setEngineVolume((Double) engineObj);
-            }
+            Double engineDouble = doc.getDouble("engineVolume");
+            if (engineDouble != null) car.setEngineVolume(engineDouble);
 
-            Object priceObj = doc.get("price");
-            if (priceObj instanceof Double) {
-                car.setPrice((Double) priceObj);
+            Double priceDouble = doc.getDouble("price");
+            if (priceDouble != null) {
+                car.setPrice(priceDouble);
+            } else {
+                Long priceLong = doc.getLong("price");
+                if (priceLong != null) car.setPrice(priceLong.doubleValue());
             }
 
             car.setDescription(doc.getString("description"));
             car.setOwnerId(doc.getString("ownerId"));
 
-            List<String> imageUrls = (List<String>) doc.get("imageUrls");
-            if (imageUrls != null && !imageUrls.isEmpty()) {
-                car.setImageUrls(imageUrls);
+            @SuppressWarnings("unchecked")
+            List<String> imagePaths = (List<String>) doc.get("imagePaths");
+            if (imagePaths != null && !imagePaths.isEmpty()) {
+                car.setImageUrls(new ArrayList<>(imagePaths));
+            } else {
+                @SuppressWarnings("unchecked")
+                List<String> imageUrls = (List<String>) doc.get("imageUrls");
+                if (imageUrls != null) {
+                    car.setImageUrls(new ArrayList<>(imageUrls));
+                }
             }
 
             Date createdAt = doc.getDate("createdAt");
-            if (createdAt != null) {
-                car.setCreatedAt(createdAt);
-            }
-
-            Boolean favorite = doc.getBoolean("favorite");
-            if (favorite != null) {
-                car.setFavorite(favorite);
-            }
+            if (createdAt != null) car.setCreatedAt(createdAt);
 
             return car;
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.e(TAG, "Error converting document", e);
             return null;
         }
     }
 
     private void displayCarDetails() {
+        if (currentCar == null) return;
+
         brandEditText.setText(currentCar.getBrand());
         modelEditText.setText(currentCar.getModel());
         yearEditText.setText(String.valueOf(currentCar.getYear()));
         mileageEditText.setText(String.valueOf(currentCar.getMileage()));
         engineEditText.setText(String.valueOf(currentCar.getEngineVolume()));
-        priceEditText.setText(String.valueOf(currentCar.getPrice()));
+        priceEditText.setText(String.valueOf((int) currentCar.getPrice()));
         descriptionEditText.setText(currentCar.getDescription());
 
-        if (currentCar.getImageUrl() != null) {
-            Glide.with(this).load(currentCar.getImageUrl()).into(carImageView);
+        // Загружаем существующие фото
+        if (currentCar.getImageUrls() != null && !currentCar.getImageUrls().isEmpty()) {
+            savedImagePaths.clear();
+            savedImagePaths.addAll(currentCar.getImageUrls());
         }
     }
 
@@ -201,77 +219,159 @@ public class EditCarActivity extends AppCompatActivity {
         String priceStr = priceEditText.getText().toString().trim();
         String description = descriptionEditText.getText().toString().trim();
 
-        if (brand.isEmpty() || model.isEmpty() || yearStr.isEmpty() ||
-                mileageStr.isEmpty() || engineStr.isEmpty() || priceStr.isEmpty()) {
-            Toast.makeText(this, "Заполните все обязательные поля", Toast.LENGTH_SHORT).show();
+        if (brand.isEmpty()) { brandEditText.setError("Заполните поле"); return; }
+        if (model.isEmpty()) { modelEditText.setError("Заполните поле"); return; }
+        if (yearStr.isEmpty()) { yearEditText.setError("Заполните поле"); return; }
+        if (mileageStr.isEmpty()) { mileageEditText.setError("Заполните поле"); return; }
+        if (engineStr.isEmpty()) { engineEditText.setError("Заполните поле"); return; }
+        if (priceStr.isEmpty()) { priceEditText.setError("Заполните поле"); return; }
+
+        try {
+            Integer.parseInt(yearStr);
+            Integer.parseInt(mileageStr);
+            Double.parseDouble(engineStr);
+            Double.parseDouble(priceStr);
+        } catch (NumberFormatException e) {
+            Toast.makeText(this, "Проверьте числовые данные", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        try {
-            currentCar.setBrand(brand);
-            currentCar.setModel(model);
-            currentCar.setYear(Integer.parseInt(yearStr));
-            currentCar.setMileage(Integer.parseInt(mileageStr));
-            currentCar.setEngineVolume(Double.parseDouble(engineStr));
-            currentCar.setPrice(Double.parseDouble(priceStr));
-            currentCar.setDescription(description);
+        progressBar.setVisibility(View.VISIBLE);
+        submitButton.setEnabled(false);
 
-            if (imageUri != null) {
-                uploadImageAndUpdateCar();
-            } else {
-                updateCarInFirestore();
-            }
-        } catch (NumberFormatException e) {
-            Toast.makeText(this, "Проверьте корректность введенных числовых данных", Toast.LENGTH_SHORT).show();
+        // Если есть новые фото - сохраняем их
+        if (!selectedImages.isEmpty()) {
+            saveNewImages();
+        } else {
+            updateCarInFirestore();
         }
     }
 
-    private void uploadImageAndUpdateCar() {
-        progressBar.setVisibility(View.VISIBLE);
+    private void saveNewImages() {
+        // Удаляем старые фото
+        if (savedImagePaths != null) {
+            for (String path : savedImagePaths) {
+                File file = new File(path);
+                if (file.exists()) file.delete();
+            }
+        }
+        savedImagePaths.clear();
 
-        StorageReference imageRef = storage.getReference().child("car_images/" +
-                System.currentTimeMillis() + ".jpg");
+        for (Uri uri : selectedImages) {
+            try {
+                InputStream inputStream = getContentResolver().openInputStream(uri);
+                if (inputStream == null) continue;
 
-        imageRef.putFile(imageUri)
-                .addOnSuccessListener(taskSnapshot -> {
-                    imageRef.getDownloadUrl().addOnSuccessListener(uri -> {
-                        // Используем setImageUrls вместо setImageUrl
-                        currentCar.setImageUrls(Collections.singletonList(uri.toString()));
-                        updateCarInFirestore();
-                    });
-                })
-                .addOnFailureListener(e -> {
-                    progressBar.setVisibility(View.GONE);
-                    Toast.makeText(this, "Ошибка загрузки фото", Toast.LENGTH_SHORT).show();
-                });
+                String fileName = "car_" + UUID.randomUUID().toString() + ".jpg";
+                File imageFile = new File(getFilesDir(), "car_images/" + fileName);
+
+                FileOutputStream outputStream = new FileOutputStream(imageFile);
+                byte[] buffer = new byte[4096];
+                int bytesRead;
+                while ((bytesRead = inputStream.read(buffer)) != -1) {
+                    outputStream.write(buffer, 0, bytesRead);
+                }
+                inputStream.close();
+                outputStream.close();
+
+                savedImagePaths.add(imageFile.getAbsolutePath());
+            } catch (Exception e) {
+                Log.e(TAG, "Error saving image", e);
+            }
+        }
+
+        updateCarInFirestore();
     }
 
     private void updateCarInFirestore() {
-        progressBar.setVisibility(View.VISIBLE);
-
         Map<String, Object> carData = new HashMap<>();
-        carData.put("brand", currentCar.getBrand());
-        carData.put("model", currentCar.getModel());
-        carData.put("year", currentCar.getYear());
-        carData.put("mileage", currentCar.getMileage());
-        carData.put("engineVolume", currentCar.getEngineVolume());
-        carData.put("price", currentCar.getPrice());
-        carData.put("description", currentCar.getDescription());
-
-        if (currentCar.getImageUrls() != null && !currentCar.getImageUrls().isEmpty()) {
-            carData.put("imageUrls", currentCar.getImageUrls());
-        }
+        carData.put("brand", brandEditText.getText().toString().trim());
+        carData.put("model", modelEditText.getText().toString().trim());
+        carData.put("year", Integer.parseInt(yearEditText.getText().toString().trim()));
+        carData.put("mileage", Integer.parseInt(mileageEditText.getText().toString().trim()));
+        carData.put("engineVolume", Double.parseDouble(engineEditText.getText().toString().trim()));
+        carData.put("price", Double.parseDouble(priceEditText.getText().toString().trim()));
+        carData.put("description", descriptionEditText.getText().toString().trim());
+        carData.put("imagePaths", savedImagePaths);
+        carData.put("updatedAt", new Date());
 
         db.collection("cars").document(carId)
                 .update(carData)
                 .addOnSuccessListener(aVoid -> {
                     progressBar.setVisibility(View.GONE);
-                    Toast.makeText(EditCarActivity.this, "Изменения сохранены", Toast.LENGTH_SHORT).show();
+                    submitButton.setEnabled(true);
+                    Toast.makeText(this, "Изменения сохранены", Toast.LENGTH_SHORT).show();
                     finish();
                 })
                 .addOnFailureListener(e -> {
                     progressBar.setVisibility(View.GONE);
-                    Toast.makeText(EditCarActivity.this, "Ошибка сохранения: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    submitButton.setEnabled(true);
+                    Toast.makeText(this, "Ошибка сохранения: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
+    }
+
+    // Адаптер предпросмотра фото
+    private class ImagePreviewAdapter extends RecyclerView.Adapter<ImagePreviewAdapter.ViewHolder> {
+        private List<Uri> images;
+
+        ImagePreviewAdapter(List<Uri> images) {
+            this.images = images;
+        }
+
+        @Override
+        public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+            View v = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_selected_image, parent, false);
+            return new ViewHolder(v);
+        }
+
+        @Override
+        public void onBindViewHolder(ViewHolder holder, int pos) {
+            // Показываем существующие фото
+            if (pos < savedImagePaths.size()) {
+                File file = new File(savedImagePaths.get(pos));
+                if (file.exists()) {
+                    Glide.with(EditCarActivity.this).load(file).centerCrop().into(holder.imageView);
+                }
+            }
+            // Показываем новые фото
+            else if (pos - savedImagePaths.size() < images.size()) {
+                Glide.with(EditCarActivity.this)
+                        .load(images.get(pos - savedImagePaths.size()))
+                        .centerCrop()
+                        .into(holder.imageView);
+            }
+
+            holder.removeButton.setOnClickListener(v -> {
+                if (pos < savedImagePaths.size()) {
+                    // Удаляем существующее фото
+                    File file = new File(savedImagePaths.get(pos));
+                    if (file.exists()) file.delete();
+                    savedImagePaths.remove(pos);
+                } else {
+                    // Удаляем новое фото
+                    int newPos = pos - savedImagePaths.size();
+                    if (newPos < images.size()) {
+                        images.remove(newPos);
+                    }
+                }
+                notifyDataSetChanged();
+            });
+        }
+
+        @Override
+        public int getItemCount() {
+            return savedImagePaths.size() + images.size();
+        }
+
+        class ViewHolder extends RecyclerView.ViewHolder {
+            ImageView imageView;
+            ImageView removeButton;
+            ViewHolder(View v) {
+                super(v);
+                imageView = v.findViewById(R.id.selectedImage);
+                removeButton = v.findViewById(R.id.removeImageButton);
+            }
+        }
     }
 }

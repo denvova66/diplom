@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="32dp"
+    android:background="@color/white">
+
+    <TextView
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:text="📧"
+        android:textSize="64sp"
+        android:gravity="center"
+        android:layout_marginBottom="24dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Подтвердите вашу почту"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="@color/black"
+        android:layout_marginBottom="12dp" />
+
+    <TextView
+        android:id="@+id/emailText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Письмо отправлено на ваш email"
+        android:textSize="14sp"
+        android:textColor="#666666"
+        android:gravity="center"
+        android:layout_marginBottom="24dp" />
+
+    <Button
+        android:id="@+id/checkButton"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="Я подтвердил почту"
+        android:textColor="@color/white"
+        android:background="@drawable/button_red"
+        android:layout_marginBottom="12dp" />
+
+    <Button
+        android:id="@+id/resendButton"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="Отправить письмо повторно"
+        android:textColor="@color/red"
+        android:background="@drawable/button_outline_red" />
+</LinearLayout>

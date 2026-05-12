@@ -15,7 +15,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.bumptech.glide.Glide;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
@@ -28,18 +27,15 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import de.hdodenhof.circleimageview.CircleImageView;
-
-public class ChatActivity extends AppCompatActivity {
+public class SupportChatActivity extends AppCompatActivity {
     private RecyclerView messagesRecycler;
     private EditText messageInput;
     private ImageView sendButton;
     private MessageAdapter adapter;
     private List<Message> messages;
     private FirebaseFirestore db;
-    private String chatId;
     private String currentUserId;
-    private String otherUserPhone;
+    private String chatId;
     private LinearLayoutManager layoutManager;
 
     @Override
@@ -50,13 +46,17 @@ public class ChatActivity extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
         currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
 
-        chatId = getIntent().getStringExtra("chatId");
-        String userName = getIntent().getStringExtra("userName");
-        otherUserPhone = getIntent().getStringExtra("userPhone");
-        String userAvatar = getIntent().getStringExtra("userAvatar");
-        boolean userOnline = getIntent().getBooleanExtra("userOnline", false);
+        // Настраиваем заголовок
+        TextView titleText = findViewById(R.id.chatUserName);
+        TextView statusText = findViewById(R.id.onlineStatus);
+        if (titleText != null) titleText.setText("Поддержка");
+        if (statusText != null) {
+            statusText.setText("всегда на связи");
+            statusText.setTextColor(0xFF4CAF50);
+        }
 
-        setupHeader(userName, otherUserPhone, userAvatar, userOnline);
+        ImageView backButton = findViewById(R.id.backButton);
+        if (backButton != null) backButton.setOnClickListener(v -> finish());
 
         messagesRecycler = findViewById(R.id.messagesRecycler);
         messageInput = findViewById(R.id.messageInput);
@@ -69,51 +69,61 @@ public class ChatActivity extends AppCompatActivity {
         layoutManager.setStackFromEnd(true);
         messagesRecycler.setLayoutManager(layoutManager);
         messagesRecycler.setAdapter(adapter);
-
-        // Убираем анимацию для избежания мерцания
         messagesRecycler.setItemAnimator(null);
 
         sendButton.setOnClickListener(v -> sendMessage());
 
-        ImageView backButton = findViewById(R.id.backButton);
-        if (backButton != null) backButton.setOnClickListener(v -> finish());
-
-        loadMessages();
+        findOrCreateSupportChat();
     }
 
-    private void setupHeader(String userName, String phone, String avatar, boolean online) {
-        TextView nameText = findViewById(R.id.chatUserName);
-        TextView statusText = findViewById(R.id.onlineStatus);
-        TextView phoneText = findViewById(R.id.userPhoneText);
-        CircleImageView avatarView = findViewById(R.id.chatAvatar);
-        ImageView callButton = findViewById(R.id.callButton);
+    private void findOrCreateSupportChat() {
+        db.collection("support_chats")
+                .whereEqualTo("userId", currentUserId)
+                .limit(1)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    if (snapshot.isEmpty()) {
+                        createSupportChat();
+                    } else {
+                        chatId = snapshot.getDocuments().get(0).getId();
+                        loadMessages();
+                    }
+                });
+    }
 
-        if (nameText != null) nameText.setText(userName != null ? userName : "Пользователь");
-        if (statusText != null) {
-            statusText.setText(online ? "в сети" : "не в сети");
-            statusText.setTextColor(online ? 0xFF4CAF50 : 0xFF999999);
-        }
-        if (phoneText != null && phone != null && !phone.isEmpty()) {
-            phoneText.setText(phone);
-            phoneText.setVisibility(View.VISIBLE);
-        }
-        if (avatarView != null && avatar != null && !avatar.isEmpty()) {
-            Glide.with(this).load(avatar).placeholder(R.drawable.ic_person).circleCrop().into(avatarView);
-        }
-        if (callButton != null && phone != null && !phone.isEmpty()) {
-            callButton.setVisibility(View.VISIBLE);
-            callButton.setOnClickListener(v -> {
-                Intent intent = new Intent(Intent.ACTION_DIAL);
-                intent.setData(Uri.parse("tel:" + otherUserPhone));
-                startActivity(intent);
-            });
-        }
+    private void createSupportChat() {
+        Map<String, Object> chatData = new HashMap<>();
+        chatData.put("userId", currentUserId);
+        chatData.put("createdAt", new Date());
+        chatData.put("lastMessage", "");
+        chatData.put("lastMessageTime", new Date());
+        chatData.put("userName", UserManager.getCurrentUser() != null ?
+                UserManager.getCurrentUser().getFullName() : "Пользователь");
+        chatData.put("userEmail", FirebaseAuth.getInstance().getCurrentUser().getEmail());
+
+        db.collection("support_chats")
+                .add(chatData)
+                .addOnSuccessListener(doc -> {
+                    chatId = doc.getId();
+
+                    // Первое сообщение от поддержки
+                    Map<String, Object> firstMsg = new HashMap<>();
+                    firstMsg.put("senderId", "support");
+                    firstMsg.put("text", "Здравствуйте! Опишите вашу проблему, и мы поможем.");
+                    firstMsg.put("timestamp", new Date());
+                    firstMsg.put("isAdmin", true);
+
+                    db.collection("support_chats").document(chatId)
+                            .collection("messages").add(firstMsg);
+
+                    loadMessages();
+                });
     }
 
     private void loadMessages() {
         if (chatId == null) return;
 
-        db.collection("chats").document(chatId)
+        db.collection("support_chats").document(chatId)
                 .collection("messages")
                 .orderBy("timestamp", Query.Direction.ASCENDING)
                 .addSnapshotListener((value, error) -> {
@@ -126,19 +136,18 @@ public class ChatActivity extends AppCompatActivity {
                             msg.setSenderId(doc.getString("senderId"));
                             msg.setText(doc.getString("text"));
                             msg.setTimestamp(doc.getDate("timestamp"));
+                            Boolean isAdminMsg = doc.getBoolean("isAdmin");
+                            if (isAdminMsg != null && isAdminMsg) {
+                                msg.setSenderId("support");
+                            }
                             messages.add(msg);
                         }
                     }
                     adapter.notifyDataSetChanged();
-                    scrollToBottom();
+                    if (!messages.isEmpty()) {
+                        messagesRecycler.smoothScrollToPosition(messages.size() - 1);
+                    }
                 });
-    }
-
-    private void scrollToBottom() {
-        if (!messages.isEmpty()) {
-            messagesRecycler.post(() ->
-                    messagesRecycler.smoothScrollToPosition(messages.size() - 1));
-        }
     }
 
     private void sendMessage() {
@@ -153,9 +162,9 @@ public class ChatActivity extends AppCompatActivity {
         msgData.put("senderId", currentUserId);
         msgData.put("text", text);
         msgData.put("timestamp", new Date());
-        msgData.put("read", false);
+        msgData.put("isAdmin", false);
 
-        db.collection("chats").document(chatId)
+        db.collection("support_chats").document(chatId)
                 .collection("messages")
                 .add(msgData)
                 .addOnSuccessListener(doc -> {
@@ -164,9 +173,8 @@ public class ChatActivity extends AppCompatActivity {
                     Map<String, Object> updateData = new HashMap<>();
                     updateData.put("lastMessage", text);
                     updateData.put("lastMessageTime", new Date());
-                    db.collection("chats").document(chatId).update(updateData);
-                })
-                .addOnFailureListener(e -> Toast.makeText(this, "Ошибка отправки", Toast.LENGTH_SHORT).show());
+                    db.collection("support_chats").document(chatId).update(updateData);
+                });
     }
 
     class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.ViewHolder> {
@@ -181,19 +189,18 @@ public class ChatActivity extends AppCompatActivity {
         @Override
         public int getItemViewType(int position) {
             Message msg = msgList.get(position);
-            boolean isMine = msg.getSenderId() != null && msg.getSenderId().equals(userId);
+            String senderId = msg.getSenderId();
+            boolean isMine = (senderId != null && senderId.equals(userId)) ||
+                    (senderId == null && userId == null);
             return isMine ? 1 : 0;
         }
 
         @Override
         public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
             LayoutInflater inflater = LayoutInflater.from(parent.getContext());
-            View v;
-            if (viewType == 1) {
-                v = inflater.inflate(R.layout.item_message_sent, parent, false);
-            } else {
-                v = inflater.inflate(R.layout.item_message_received, parent, false);
-            }
+            View v = viewType == 1 ?
+                    inflater.inflate(R.layout.item_message_sent, parent, false) :
+                    inflater.inflate(R.layout.item_message_received, parent, false);
             return new ViewHolder(v);
         }
 
@@ -201,7 +208,6 @@ public class ChatActivity extends AppCompatActivity {
         public void onBindViewHolder(ViewHolder holder, int pos) {
             Message msg = msgList.get(pos);
             holder.messageText.setText(msg.getText());
-
             if (msg.getTimestamp() != null) {
                 SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
                 holder.messageTime.setText(sdf.format(msg.getTimestamp()));

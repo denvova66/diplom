@@ -18,10 +18,8 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
-import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.io.File;
@@ -81,6 +79,7 @@ public class CarDetailActivity extends AppCompatActivity {
         Button favoriteButton = findViewById(R.id.favoriteButton);
         Button deleteButton = findViewById(R.id.deleteButton);
         Button reviewsButton = findViewById(R.id.reviewsButton);
+        Button reportButton = findViewById(R.id.reportButton);
 
         if (editButton != null) {
             editButton.setOnClickListener(v -> {
@@ -115,6 +114,10 @@ public class CarDetailActivity extends AppCompatActivity {
                 intent.putExtra("targetUserId", currentCar.getOwnerId());
                 startActivity(intent);
             });
+        }
+
+        if (reportButton != null) {
+            reportButton.setOnClickListener(v -> reportCar());
         }
     }
 
@@ -154,20 +157,28 @@ public class CarDetailActivity extends AppCompatActivity {
             carImagesRecyclerView.setAdapter(adapter);
 
             Button favoriteButton = findViewById(R.id.favoriteButton);
-            if (favoriteButton != null) {
-                updateFavoriteButton(favoriteButton);
-            }
+            if (favoriteButton != null) updateFavoriteButton(favoriteButton);
 
             // Права на редактирование
             FirebaseUser currentUser = mAuth.getCurrentUser();
             Button editBtn = findViewById(R.id.editButton);
             Button deleteBtn = findViewById(R.id.deleteButton);
 
-            if (currentUser != null && currentUser.getUid().equals(currentCar.getOwnerId())) {
+            boolean isOwner = currentUser != null && currentUser.getUid().equals(currentCar.getOwnerId());
+            boolean isAdmin = UserManager.isAdmin();
+
+            if (isOwner) {
                 if (editBtn != null) editBtn.setVisibility(View.VISIBLE);
-                if (deleteBtn != null) deleteBtn.setVisibility(View.VISIBLE);
             } else {
                 if (editBtn != null) editBtn.setVisibility(View.GONE);
+            }
+
+            if (isOwner || isAdmin) {
+                if (deleteBtn != null) {
+                    deleteBtn.setVisibility(View.VISIBLE);
+                    deleteBtn.setText(isAdmin && !isOwner ? "Удалить (Админ)" : "Удалить");
+                }
+            } else {
                 if (deleteBtn != null) deleteBtn.setVisibility(View.GONE);
             }
         }
@@ -205,8 +216,11 @@ public class CarDetailActivity extends AppCompatActivity {
 
     private void deleteCar() {
         FirebaseUser currentUser = mAuth.getCurrentUser();
-        if (currentUser == null || !currentUser.getUid().equals(currentCar.getOwnerId())) {
-            Toast.makeText(this, "Вы не можете удалить это объявление", Toast.LENGTH_SHORT).show();
+        boolean isOwner = currentUser != null && currentUser.getUid().equals(currentCar.getOwnerId());
+        boolean isAdmin = UserManager.isAdmin();
+
+        if (!isOwner && !isAdmin) {
+            Toast.makeText(this, "У вас нет прав на удаление", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -214,13 +228,27 @@ public class CarDetailActivity extends AppCompatActivity {
                 .setTitle("Удаление")
                 .setMessage("Вы уверены, что хотите удалить это объявление?")
                 .setPositiveButton("Удалить", (dialog, which) -> {
-                    if (currentCar.isLocal()) {
-                        LocalCarManager.removeCar(currentCar.getId());
-                        Toast.makeText(this, "Объявление удалено", Toast.LENGTH_SHORT).show();
-                        finish();
-                    } else {
-                        db.collection("cars").document(currentCar.getId())
-                                .delete()
+                    String carId = currentCar.getId();
+
+                    // Удаляем локальные фото
+                    if (currentCar.getImageUrls() != null) {
+                        for (String path : currentCar.getImageUrls()) {
+                            if (path != null && !path.isEmpty()) {
+                                File file = new File(path);
+                                if (file.exists()) file.delete();
+                            }
+                        }
+                    }
+
+                    // Удаляем из избранного
+                    db.collection("favorites").whereEqualTo("carId", carId).get()
+                            .addOnSuccessListener(favs -> {
+                                for (var doc : favs) doc.getReference().delete();
+                            });
+
+                    // Удаляем из Firebase
+                    if (!currentCar.isLocal()) {
+                        db.collection("cars").document(carId).delete()
                                 .addOnSuccessListener(aVoid -> {
                                     Toast.makeText(this, "Объявление удалено", Toast.LENGTH_SHORT).show();
                                     finish();
@@ -228,7 +256,42 @@ public class CarDetailActivity extends AppCompatActivity {
                                 .addOnFailureListener(e -> {
                                     Toast.makeText(this, "Ошибка при удалении", Toast.LENGTH_SHORT).show();
                                 });
+                    } else {
+                        LocalCarManager.removeCar(carId);
+                        Toast.makeText(this, "Объявление удалено", Toast.LENGTH_SHORT).show();
+                        finish();
                     }
+                })
+                .setNegativeButton("Отмена", null)
+                .show();
+    }
+
+    private void reportCar() {
+        if (currentCar == null) return;
+
+        String currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        if (currentCar.getOwnerId().equals(currentUserId)) {
+            Toast.makeText(this, "Нельзя пожаловаться на своё объявление", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String[] reasons = {"Мошенничество", "Спам", "Неверная цена", "Фейковое объявление", "Другое"};
+
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Пожаловаться на объявление")
+                .setItems(reasons, (dialog, which) -> {
+                    Map<String, Object> report = new HashMap<>();
+                    report.put("reporterId", currentUserId);
+                    report.put("targetType", "car");
+                    report.put("targetId", currentCar.getId());
+                    report.put("reason", reasons[which]);
+                    report.put("status", "pending");
+                    report.put("createdAt", new Date());
+
+                    db.collection("reports").add(report)
+                            .addOnSuccessListener(doc -> {
+                                Toast.makeText(this, "Жалоба отправлена", Toast.LENGTH_SHORT).show();
+                            });
                 })
                 .setNegativeButton("Отмена", null)
                 .show();
@@ -270,9 +333,6 @@ public class CarDetailActivity extends AppCompatActivity {
                     } else {
                         createNewChat(currentUserId, sellerId);
                     }
-                })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(this, "Ошибка: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
     }
 
@@ -284,10 +344,7 @@ public class CarDetailActivity extends AppCompatActivity {
         chatData.put("lastMessageTime", new Date());
 
         db.collection("chats").add(chatData)
-                .addOnSuccessListener(doc -> openChat(doc.getId()))
-                .addOnFailureListener(e -> {
-                    Toast.makeText(this, "Ошибка создания чата", Toast.LENGTH_SHORT).show();
-                });
+                .addOnSuccessListener(doc -> openChat(doc.getId()));
     }
 
     private void openChat(String chatId) {
@@ -298,7 +355,7 @@ public class CarDetailActivity extends AppCompatActivity {
         startActivity(intent);
     }
 
-    // Адаптер изображений
+    // ==================== АДАПТЕР ИЗОБРАЖЕНИЙ ====================
     private class CarImageAdapter extends RecyclerView.Adapter<CarImageAdapter.ImageViewHolder> {
         private List<String> imageUrls;
 
@@ -316,45 +373,49 @@ public class CarDetailActivity extends AppCompatActivity {
 
         @Override
         public void onBindViewHolder(@NonNull ImageViewHolder holder, int position) {
-            String imageUrl = imageUrls.get(position);
+            String path = imageUrls.get(position);
 
             ViewGroup.LayoutParams params = holder.imageView.getLayoutParams();
             params.height = 280;
             holder.imageView.setLayoutParams(params);
             holder.imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
 
-            if (imageUrl != null && !imageUrl.isEmpty() && !imageUrl.equals("placeholder")) {
-                if (imageUrl.startsWith("https://firebasestorage.googleapis.com")) {
+            if (path != null && !path.isEmpty() && !path.equals("placeholder")) {
+                // Локальный файл
+                File imageFile = new File(path);
+                if (imageFile.exists()) {
                     Glide.with(CarDetailActivity.this)
-                            .load(imageUrl)
+                            .load(imageFile)
                             .placeholder(R.drawable.ic_car_placeholder)
                             .error(R.drawable.ic_car_placeholder)
-                            .diskCacheStrategy(DiskCacheStrategy.ALL)
                             .centerCrop()
                             .into(holder.imageView);
-                } else if (imageUrl.startsWith("/") || imageUrl.startsWith("file://")) {
-                    String path = imageUrl.replace("file://", "");
-                    File imageFile = new File(path);
-                    if (imageFile.exists()) {
-                        Glide.with(CarDetailActivity.this)
-                                .load(imageFile)
-                                .placeholder(R.drawable.ic_car_placeholder)
-                                .centerCrop()
-                                .into(holder.imageView);
-                    } else {
-                        holder.imageView.setImageResource(R.drawable.ic_car_placeholder);
-                    }
-                } else if (imageUrl.startsWith("local://")) {
-                    String imageName = imageUrl.replace("local://", "");
+                }
+                // Старые URL из Firebase Storage (на всякий случай)
+                else if (path.startsWith("https://firebasestorage.googleapis.com")) {
+                    Glide.with(CarDetailActivity.this)
+                            .load(path)
+                            .placeholder(R.drawable.ic_car_placeholder)
+                            .error(R.drawable.ic_car_placeholder)
+                            .centerCrop()
+                            .into(holder.imageView);
+                }
+                // Другие URL
+                else if (path.startsWith("http")) {
+                    Glide.with(CarDetailActivity.this)
+                            .load(path)
+                            .placeholder(R.drawable.ic_car_placeholder)
+                            .centerCrop()
+                            .into(holder.imageView);
+                }
+                // Локальный ресурс
+                else if (path.startsWith("local://")) {
+                    String imageName = path.replace("local://", "");
                     int resourceId = getResources().getIdentifier(imageName, "drawable", getPackageName());
                     holder.imageView.setImageResource(resourceId != 0 ? resourceId : R.drawable.ic_car_placeholder);
-                } else {
-                    Glide.with(CarDetailActivity.this)
-                            .load(imageUrl)
-                            .placeholder(R.drawable.ic_car_placeholder)
-                            .error(R.drawable.ic_car_placeholder)
-                            .centerCrop()
-                            .into(holder.imageView);
+                }
+                else {
+                    holder.imageView.setImageResource(R.drawable.ic_car_placeholder);
                 }
             } else {
                 holder.imageView.setImageResource(R.drawable.ic_car_placeholder);

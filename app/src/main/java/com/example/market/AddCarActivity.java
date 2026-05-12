@@ -24,16 +24,12 @@ import com.bumptech.glide.Glide;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.storage.FirebaseStorage;
-import com.google.firebase.storage.StorageReference;
-import com.google.firebase.storage.UploadTask;
 
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 public class AddCarActivity extends AppCompatActivity {
     private static final String TAG = "AddCarActivity";
@@ -44,11 +40,9 @@ public class AddCarActivity extends AppCompatActivity {
     private RecyclerView imagesRecyclerView;
     private ProgressBar progressBar;
     private List<Uri> selectedImages = new ArrayList<>();
-    private List<String> uploadedImageUrls = new ArrayList<>();
+    private List<String> uploadedUrls = new ArrayList<>();
     private ImagePreviewAdapter imagePreviewAdapter;
     private FirebaseFirestore db;
-    private FirebaseStorage storage;
-    private int uploadCount = 0;
 
     private ActivityResultLauncher<String[]> imagePickerLauncher;
 
@@ -58,7 +52,6 @@ public class AddCarActivity extends AppCompatActivity {
         setContentView(R.layout.activity_add_car);
 
         db = FirebaseFirestore.getInstance();
-        storage = FirebaseStorage.getInstance();
 
         if (FirebaseAuth.getInstance().getCurrentUser() == null) {
             Toast.makeText(this, "Необходимо войти в систему", Toast.LENGTH_SHORT).show();
@@ -95,9 +88,7 @@ public class AddCarActivity extends AppCompatActivity {
         progressBar = findViewById(R.id.progressBar);
 
         Toolbar toolbar = findViewById(R.id.toolbar);
-        if (toolbar != null) {
-            toolbar.setNavigationOnClickListener(v -> finish());
-        }
+        if (toolbar != null) toolbar.setNavigationOnClickListener(v -> finish());
 
         imagePreviewAdapter = new ImagePreviewAdapter(selectedImages);
         imagesRecyclerView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
@@ -114,56 +105,40 @@ public class AddCarActivity extends AppCompatActivity {
         String mileageStr = mileageEditText.getText().toString().trim();
         String engineStr = engineEditText.getText().toString().trim();
         String priceStr = priceEditText.getText().toString().trim();
-        String description = descriptionEditText.getText().toString().trim();
 
-        if (brand.isEmpty() || model.isEmpty() || yearStr.isEmpty() ||
-                mileageStr.isEmpty() || engineStr.isEmpty() || priceStr.isEmpty()) {
-            Toast.makeText(this, "Заполните все обязательные поля", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
+        if (brand.isEmpty()) { brandEditText.setError("Заполните поле"); return; }
+        if (model.isEmpty()) { modelEditText.setError("Заполните поле"); return; }
+        if (yearStr.isEmpty()) { yearEditText.setError("Заполните поле"); return; }
+        if (mileageStr.isEmpty()) { mileageEditText.setError("Заполните поле"); return; }
+        if (engineStr.isEmpty()) { engineEditText.setError("Заполните поле"); return; }
+        if (priceStr.isEmpty()) { priceEditText.setError("Заполните поле"); return; }
         if (selectedImages.isEmpty()) {
             Toast.makeText(this, "Добавьте хотя бы одно фото", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        progressBar.setVisibility(View.VISIBLE);
-        submitButton.setEnabled(false);
-        uploadedImageUrls.clear();
-        uploadCount = 0;
-
-        uploadImages(0);
-    }
-
-    private void uploadImages(int index) {
-        if (index >= selectedImages.size()) {
-            saveCarToFirebase();
+        try {
+            Integer.parseInt(yearStr);
+            Integer.parseInt(mileageStr);
+            Double.parseDouble(engineStr);
+            Double.parseDouble(priceStr);
+        } catch (NumberFormatException e) {
+            Toast.makeText(this, "Проверьте числовые данные", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        Uri imageUri = selectedImages.get(index);
-        String fileName = "cars/" + UUID.randomUUID().toString() + ".jpg";
-        StorageReference imageRef = storage.getReference().child(fileName);
+        progressBar.setVisibility(View.VISIBLE);
+        submitButton.setEnabled(false);
+        uploadedUrls.clear();
 
-        UploadTask uploadTask = imageRef.putFile(imageUri);
-        uploadTask.addOnSuccessListener(taskSnapshot -> {
-            imageRef.getDownloadUrl().addOnSuccessListener(uri -> {
-                uploadedImageUrls.add(uri.toString());
-                Log.d(TAG, "Image uploaded: " + uri.toString());
-                uploadImages(index + 1);
-            }).addOnFailureListener(e -> {
-                Log.e(TAG, "Failed to get download URL", e);
-                uploadedImageUrls.add("placeholder");
-                uploadImages(index + 1);
-            });
-        }).addOnFailureListener(e -> {
-            Log.e(TAG, "Failed to upload image", e);
-            uploadedImageUrls.add("placeholder");
-            uploadImages(index + 1);
+        // Загружаем фото в Cloudinary
+        CloudinaryManager.uploadMultipleImages(this, selectedImages, urls -> {
+            uploadedUrls.addAll(urls);
+            saveCarToFirestore();
         });
     }
 
-    private void saveCarToFirebase() {
+    private void saveCarToFirestore() {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
             progressBar.setVisibility(View.GONE);
@@ -172,51 +147,55 @@ public class AddCarActivity extends AppCompatActivity {
             return;
         }
 
-        try {
-            Map<String, Object> carData = new HashMap<>();
-            carData.put("brand", brandEditText.getText().toString().trim());
-            carData.put("model", modelEditText.getText().toString().trim());
-            carData.put("year", Integer.parseInt(yearEditText.getText().toString().trim()));
-            carData.put("mileage", Integer.parseInt(mileageEditText.getText().toString().trim()));
-            carData.put("engineVolume", Double.parseDouble(engineEditText.getText().toString().trim()));
-            carData.put("price", Double.parseDouble(priceEditText.getText().toString().trim()));
-            carData.put("description", descriptionEditText.getText().toString().trim());
-            carData.put("ownerId", user.getUid());
-            carData.put("imageUrls", uploadedImageUrls);
-            carData.put("createdAt", new Date());
-            carData.put("status", "active");
-            carData.put("views", 0);
+        Map<String, Object> carData = new HashMap<>();
+        carData.put("brand", brandEditText.getText().toString().trim());
+        carData.put("model", modelEditText.getText().toString().trim());
+        carData.put("year", Integer.parseInt(yearEditText.getText().toString().trim()));
+        carData.put("mileage", Integer.parseInt(mileageEditText.getText().toString().trim()));
+        carData.put("engineVolume", Double.parseDouble(engineEditText.getText().toString().trim()));
+        carData.put("price", Double.parseDouble(priceEditText.getText().toString().trim()));
+        carData.put("description", descriptionEditText.getText().toString().trim());
+        carData.put("ownerId", user.getUid());
+        carData.put("imageUrls", uploadedUrls);
+        carData.put("createdAt", new Date());
+        carData.put("status", "active");
 
-            db.collection("cars")
-                    .add(carData)
-                    .addOnSuccessListener(documentReference -> {
-                        Log.d(TAG, "Car saved to Firebase: " + documentReference.getId());
+        db.collection("cars")
+                .add(carData)
+                .addOnSuccessListener(doc -> {
+                    Log.d(TAG, "Car saved: " + doc.getId());
+                    progressBar.setVisibility(View.GONE);
+                    submitButton.setEnabled(true);
+                    Toast.makeText(this, "Объявление опубликовано!", Toast.LENGTH_SHORT).show();
 
-                        progressBar.setVisibility(View.GONE);
-                        submitButton.setEnabled(true);
+                    // Сохраняем локально
+                    Car car = new Car();
+                    car.setId(doc.getId());
+                    car.setBrand(carData.get("brand").toString());
+                    car.setModel(carData.get("model").toString());
+                    car.setYear((int) carData.get("year"));
+                    car.setMileage((int) carData.get("mileage"));
+                    car.setEngineVolume((double) carData.get("engineVolume"));
+                    car.setPrice((double) carData.get("price"));
+                    car.setDescription(carData.get("description") != null ? carData.get("description").toString() : "");
+                    car.setOwnerId(user.getUid());
+                    car.setImageUrls(uploadedUrls);
+                    car.setCreatedAt(new Date());
+                    LocalCarManager.addCar(car);
 
-                        Toast.makeText(this, "Объявление опубликовано!", Toast.LENGTH_SHORT).show();
-
-                        Intent intent = new Intent(AddCarActivity.this, MainActivity.class);
-                        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
-                        startActivity(intent);
-                        finish();
-                    })
-                    .addOnFailureListener(e -> {
-                        progressBar.setVisibility(View.GONE);
-                        submitButton.setEnabled(true);
-                        Toast.makeText(this, "Ошибка сохранения: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                        Log.e(TAG, "Error saving car", e);
-                    });
-
-        } catch (NumberFormatException e) {
-            progressBar.setVisibility(View.GONE);
-            submitButton.setEnabled(true);
-            Toast.makeText(this, "Проверьте числовые данные", Toast.LENGTH_SHORT).show();
-        }
+                    startActivity(new Intent(AddCarActivity.this, MainActivity.class)
+                            .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK));
+                    finish();
+                })
+                .addOnFailureListener(e -> {
+                    progressBar.setVisibility(View.GONE);
+                    submitButton.setEnabled(true);
+                    Toast.makeText(this, "Ошибка сохранения: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    Log.e(TAG, "Error saving car", e);
+                });
     }
 
-    // Адаптер предпросмотра выбранных фото
+    // Адаптер предпросмотра фото
     private class ImagePreviewAdapter extends RecyclerView.Adapter<ImagePreviewAdapter.ViewHolder> {
         private List<Uri> images;
 
@@ -239,9 +218,11 @@ public class AddCarActivity extends AppCompatActivity {
                     .into(holder.imageView);
 
             holder.removeButton.setOnClickListener(v -> {
-                images.remove(pos);
-                notifyItemRemoved(pos);
-                notifyItemRangeChanged(pos, images.size());
+                if (pos < images.size()) {
+                    images.remove(pos);
+                    notifyItemRemoved(pos);
+                    notifyItemRangeChanged(pos, images.size());
+                }
             });
         }
 
@@ -253,6 +234,7 @@ public class AddCarActivity extends AppCompatActivity {
         class ViewHolder extends RecyclerView.ViewHolder {
             ImageView imageView;
             ImageView removeButton;
+
             ViewHolder(View v) {
                 super(v);
                 imageView = v.findViewById(R.id.selectedImage);

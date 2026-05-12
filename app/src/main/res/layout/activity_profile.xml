@@ -96,6 +96,7 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
 
+                    <!-- Мои объявления -->
                     <LinearLayout
                         android:id="@+id/myAdsButton"
                         android:layout_width="match_parent"
@@ -125,6 +126,7 @@
                         android:layout_height="1dp"
                         android:background="#F0F0F0" />
 
+                    <!-- Избранное -->
                     <LinearLayout
                         android:id="@+id/favoritesButton"
                         android:layout_width="match_parent"
@@ -154,6 +156,7 @@
                         android:layout_height="1dp"
                         android:background="#F0F0F0" />
 
+                    <!-- Сообщения -->
                     <LinearLayout
                         android:id="@+id/chatsButton"
                         android:layout_width="match_parent"
@@ -183,8 +186,9 @@
                         android:layout_height="1dp"
                         android:background="#F0F0F0" />
 
+                    <!-- Поддержка -->
                     <LinearLayout
-                        android:id="@+id/ordersButton"
+                        android:id="@+id/supportButton"
                         android:layout_width="match_parent"
                         android:layout_height="56dp"
                         android:background="?attr/selectableItemBackground"
@@ -196,7 +200,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="📦 Мои заказы"
+                            android:text="🆘 Поддержка"
                             android:textColor="@color/black"
                             android:textSize="16sp" />
 

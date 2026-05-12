@@ -24,9 +24,8 @@ public class UserManager {
         }
     }
 
-    public static User getCurrentUser() {
-        return currentUser;
-    }
+    public static User getCurrentUser() { return currentUser; }
+    public static boolean isAdmin() { return currentUser != null && currentUser.isAdmin(); }
 
     public static void setCurrentUser(User user) {
         currentUser = user;
@@ -42,10 +41,6 @@ public class UserManager {
         User basicUser = new User();
         basicUser.setId(firebaseUser.getUid());
         basicUser.setEmail(firebaseUser.getEmail());
-        basicUser.setFirstName("");
-        basicUser.setLastName("");
-        basicUser.setMiddleName("");
-        basicUser.setOnline(true);
 
         FirebaseFirestore.getInstance()
                 .collection("users")
@@ -56,10 +51,7 @@ public class UserManager {
                         DocumentSnapshot doc = task.getResult();
                         User user = documentToUser(doc);
                         setCurrentUser(user);
-
-                        // Обновляем онлайн статус
                         updateOnlineStatus(firebaseUser.getUid(), true);
-
                         if (callback != null) callback.onUserLoaded(user);
                     } else {
                         setCurrentUser(basicUser);
@@ -75,8 +67,7 @@ public class UserManager {
 
     private static void updateOnlineStatus(String userId, boolean online) {
         FirebaseFirestore.getInstance()
-                .collection("users")
-                .document(userId)
+                .collection("users").document(userId)
                 .update("online", online, "lastSeen", System.currentTimeMillis());
     }
 
@@ -88,13 +79,11 @@ public class UserManager {
 
     public static void saveUserToFirestore(User user) {
         if (user == null) return;
-
         FirebaseFirestore.getInstance()
-                .collection("users")
-                .document(user.getId())
+                .collection("users").document(user.getId())
                 .set(user)
-                .addOnSuccessListener(aVoid -> Log.d(TAG, "User saved to Firestore"))
-                .addOnFailureListener(e -> Log.e(TAG, "Error saving user to Firestore", e));
+                .addOnSuccessListener(aVoid -> Log.d(TAG, "User saved"))
+                .addOnFailureListener(e -> Log.e(TAG, "Error saving user", e));
     }
 
     public static void updateUserAvatar(String avatarUrl) {
@@ -105,8 +94,7 @@ public class UserManager {
         }
     }
 
-    public static void updateUserProfile(String firstName, String lastName,
-                                         String middleName, String phoneNumber) {
+    public static void updateUserProfile(String firstName, String lastName, String middleName, String phoneNumber) {
         if (currentUser != null) {
             currentUser.setFirstName(firstName != null ? firstName : "");
             currentUser.setLastName(lastName != null ? lastName : "");
@@ -119,7 +107,6 @@ public class UserManager {
 
     private static User documentToUser(DocumentSnapshot doc) {
         if (doc == null || !doc.exists()) return null;
-
         User user = new User();
         user.setId(doc.getId());
         user.setEmail(doc.getString("email"));
@@ -128,13 +115,9 @@ public class UserManager {
         user.setMiddleName(doc.getString("middleName"));
         user.setAvatarUrl(doc.getString("avatarUrl"));
         user.setPhoneNumber(doc.getString("phoneNumber"));
-
-        Boolean online = doc.getBoolean("online");
-        user.setOnline(online != null ? online : false);
-
-        Long lastSeen = doc.getLong("lastSeen");
-        user.setLastSeen(lastSeen != null ? lastSeen : 0);
-
+        user.setRole(doc.getString("role") != null ? doc.getString("role") : "user");
+        user.setOnline(doc.getBoolean("online") != null && doc.getBoolean("online"));
+        user.setLastSeen(doc.getLong("lastSeen") != null ? doc.getLong("lastSeen") : 0);
         return user;
     }
 
@@ -149,9 +132,9 @@ public class UserManager {
                 userJson.put("middleName", currentUser.getMiddleName() != null ? currentUser.getMiddleName() : "");
                 userJson.put("avatarUrl", currentUser.getAvatarUrl() != null ? currentUser.getAvatarUrl() : "");
                 userJson.put("phoneNumber", currentUser.getPhoneNumber() != null ? currentUser.getPhoneNumber() : "");
+                userJson.put("role", currentUser.getRole() != null ? currentUser.getRole() : "user");
                 userJson.put("online", currentUser.isOnline());
                 userJson.put("lastSeen", currentUser.getLastSeen());
-
                 prefs.edit().putString(USER_KEY, userJson.toString()).apply();
             } catch (Exception e) {
                 Log.e(TAG, "Error saving user to prefs", e);
@@ -161,7 +144,6 @@ public class UserManager {
 
     private static void loadUserFromPrefs() {
         if (prefs == null) return;
-
         try {
             String userJsonString = prefs.getString(USER_KEY, null);
             if (userJsonString != null) {
@@ -174,6 +156,7 @@ public class UserManager {
                 user.setMiddleName(userJson.optString("middleName"));
                 user.setAvatarUrl(userJson.optString("avatarUrl"));
                 user.setPhoneNumber(userJson.optString("phoneNumber"));
+                user.setRole(userJson.optString("role", "user"));
                 user.setOnline(userJson.optBoolean("online", false));
                 user.setLastSeen(userJson.optLong("lastSeen", 0));
                 currentUser = user;
@@ -185,13 +168,9 @@ public class UserManager {
     }
 
     public static void logout() {
-        if (currentUser != null) {
-            updateOnlineStatus(currentUser.getId(), false);
-        }
+        if (currentUser != null) updateOnlineStatus(currentUser.getId(), false);
         currentUser = null;
-        if (prefs != null) {
-            prefs.edit().remove(USER_KEY).apply();
-        }
+        if (prefs != null) prefs.edit().remove(USER_KEY).apply();
     }
 
     public interface UserLoadedCallback {

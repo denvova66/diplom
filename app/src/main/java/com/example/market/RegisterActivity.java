@@ -52,13 +52,8 @@ public class RegisterActivity extends AppCompatActivity {
         backButton = findViewById(R.id.backButton);
         progressBar = findViewById(R.id.progressBar);
 
-        if (registerButton != null) {
-            registerButton.setOnClickListener(v -> registerUser());
-        }
-
-        if (backButton != null) {
-            backButton.setOnClickListener(v -> finish());
-        }
+        if (registerButton != null) registerButton.setOnClickListener(v -> registerUser());
+        if (backButton != null) backButton.setOnClickListener(v -> finish());
     }
 
     private void registerUser() {
@@ -69,24 +64,45 @@ public class RegisterActivity extends AppCompatActivity {
         String lastName = lastNameEditText.getText().toString().trim();
         String phone = phoneEditText != null ? phoneEditText.getText().toString().trim() : "";
 
-        if (email.isEmpty() || password.isEmpty() || confirmPassword.isEmpty() ||
-                firstName.isEmpty() || lastName.isEmpty()) {
-            Toast.makeText(this, "Заполните все обязательные поля", Toast.LENGTH_SHORT).show();
+        // Валидация
+        if (firstName.isEmpty()) {
+            firstNameEditText.setError("Заполните поле");
+            firstNameEditText.requestFocus();
             return;
         }
-
+        if (lastName.isEmpty()) {
+            lastNameEditText.setError("Заполните поле");
+            lastNameEditText.requestFocus();
+            return;
+        }
+        if (email.isEmpty()) {
+            emailEditText.setError("Заполните поле");
+            emailEditText.requestFocus();
+            return;
+        }
         if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-            Toast.makeText(this, "Введите корректный email", Toast.LENGTH_SHORT).show();
+            emailEditText.setError("Введите корректный email");
+            emailEditText.requestFocus();
             return;
         }
-
-        if (!password.equals(confirmPassword)) {
-            Toast.makeText(this, "Пароли не совпадают", Toast.LENGTH_SHORT).show();
+        if (!phone.isEmpty() && !phone.matches("^\\+?[0-9]{10,15}$")) {
+            phoneEditText.setError("Введите корректный номер телефона");
+            phoneEditText.requestFocus();
             return;
         }
-
+        if (password.isEmpty()) {
+            passwordEditText.setError("Заполните поле");
+            passwordEditText.requestFocus();
+            return;
+        }
         if (password.length() < 6) {
-            Toast.makeText(this, "Пароль должен быть не менее 6 символов", Toast.LENGTH_SHORT).show();
+            passwordEditText.setError("Пароль должен быть не менее 6 символов");
+            passwordEditText.requestFocus();
+            return;
+        }
+        if (!password.equals(confirmPassword)) {
+            confirmPasswordEditText.setError("Пароли не совпадают");
+            confirmPasswordEditText.requestFocus();
             return;
         }
 
@@ -98,24 +114,31 @@ public class RegisterActivity extends AppCompatActivity {
                     if (task.isSuccessful()) {
                         FirebaseUser firebaseUser = mAuth.getCurrentUser();
                         if (firebaseUser != null) {
-                            User user = new User();
-                            user.setId(firebaseUser.getUid());
-                            user.setEmail(email);
-                            user.setFirstName(firstName);
-                            user.setLastName(lastName);
-                            user.setPhoneNumber(phone);
-                            user.setOnline(true);
+                            // Отправляем письмо для подтверждения
+                            firebaseUser.sendEmailVerification()
+                                    .addOnCompleteListener(verifyTask -> {
+                                        progressBar.setVisibility(View.GONE);
+                                        registerButton.setEnabled(true);
 
-                            UserManager.setCurrentUser(user);
-                            saveUserToFirestore(user);
+                                        // Сохраняем пользователя в Firestore
+                                        User user = new User();
+                                        user.setId(firebaseUser.getUid());
+                                        user.setEmail(email);
+                                        user.setFirstName(firstName);
+                                        user.setLastName(lastName);
+                                        user.setPhoneNumber(phone);
+                                        user.setRole("user");
 
-                            Toast.makeText(RegisterActivity.this,
-                                    "Регистрация успешна!", Toast.LENGTH_SHORT).show();
+                                        UserManager.setCurrentUser(user);
+                                        saveUserToFirestore(user);
 
-                            Intent intent = new Intent(RegisterActivity.this, MainActivity.class);
-                            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                            startActivity(intent);
-                            finish();
+                                        Toast.makeText(RegisterActivity.this,
+                                                "Регистрация успешна! Подтвердите почту.", Toast.LENGTH_LONG).show();
+
+                                        // Переходим на экран верификации
+                                        startActivity(new Intent(RegisterActivity.this, VerificationActivity.class));
+                                        finish();
+                                    });
                         }
                     } else {
                         progressBar.setVisibility(View.GONE);
@@ -123,9 +146,19 @@ public class RegisterActivity extends AppCompatActivity {
 
                         String errorMessage = "Ошибка регистрации";
                         if (task.getException() != null) {
-                            errorMessage = task.getException().getMessage();
+                            String msg = task.getException().getMessage();
+                            if (msg != null) {
+                                if (msg.contains("email address is already in use")) {
+                                    errorMessage = "Этот email уже используется";
+                                } else if (msg.contains("network error")) {
+                                    errorMessage = "Ошибка сети. Проверьте подключение к интернету";
+                                } else {
+                                    errorMessage = msg;
+                                }
+                            }
                         }
                         Toast.makeText(RegisterActivity.this, errorMessage, Toast.LENGTH_LONG).show();
+                        Log.e(TAG, "Registration failed", task.getException());
                     }
                 });
     }
@@ -137,9 +170,10 @@ public class RegisterActivity extends AppCompatActivity {
         userData.put("lastName", user.getLastName());
         userData.put("phoneNumber", user.getPhoneNumber());
         userData.put("avatarUrl", "");
+        userData.put("role", user.getRole());
         userData.put("online", true);
         userData.put("lastSeen", System.currentTimeMillis());
-        userData.put("role", "user");
+        userData.put("emailVerified", false);
         userData.put("createdAt", new Date());
 
         FirebaseFirestore.getInstance()

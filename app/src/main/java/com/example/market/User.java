@@ -10,22 +10,14 @@ public class User implements Serializable {
     private String middleName;
     private String avatarUrl;
     private String phoneNumber;
+    private String role;
     private boolean online;
     private long lastSeen;
 
     public User() {
         this.online = false;
         this.lastSeen = 0;
-    }
-
-    public User(String id, String email, String firstName, String lastName, String middleName) {
-        this.id = id;
-        this.email = email;
-        this.firstName = firstName;
-        this.lastName = lastName;
-        this.middleName = middleName;
-        this.online = false;
-        this.lastSeen = 0;
+        this.role = "user";
     }
 
     public String getId() { return id; }
@@ -49,18 +41,26 @@ public class User implements Serializable {
     public String getPhoneNumber() { return phoneNumber; }
     public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
 
+    public String getRole() { return role; }
+    public void setRole(String role) { this.role = role; }
+
     public boolean isOnline() { return online; }
     public void setOnline(boolean online) { this.online = online; }
 
     public long getLastSeen() { return lastSeen; }
     public void setLastSeen(long lastSeen) { this.lastSeen = lastSeen; }
 
+    public boolean isAdmin() {
+        return "admin".equals(role);
+    }
+
     public String getFullName() {
         StringBuilder fullName = new StringBuilder();
         if (lastName != null && !lastName.isEmpty()) fullName.append(lastName).append(" ");
         if (firstName != null && !firstName.isEmpty()) fullName.append(firstName).append(" ");
         if (middleName != null && !middleName.isEmpty()) fullName.append(middleName);
-        return fullName.toString().trim();
+        String result = fullName.toString().trim();
+        return result.isEmpty() ? "Пользователь" : result;
     }
 
     public String getInitials() {
