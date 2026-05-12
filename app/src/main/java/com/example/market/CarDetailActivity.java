@@ -222,7 +222,7 @@ public class CarDetailActivity extends AppCompatActivity {
         public void onBindViewHolder(@NonNull ViewHolder h, int pos) {
             String url = urls.get(pos);
             Log.d(TAG, "Detail image [" + pos + "]: " + url);
-            h.imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            h.imageView.setScaleType(ImageView.ScaleType.FIT_CENTER); ////44444
 
             if (url != null && !url.isEmpty() && !url.equals("placeholder")
                     && (url.startsWith("https://") || url.startsWith("http://"))) {
