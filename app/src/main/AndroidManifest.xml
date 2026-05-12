@@ -42,6 +42,8 @@
         <activity android:name=".SupportChatActivity" android:exported="false" android:screenOrientation="portrait" android:theme="@style/Theme.Market.NoActionBar" />
         <activity android:name=".AdminSupportActivity" android:exported="false" android:screenOrientation="portrait" android:theme="@style/Theme.Market.NoActionBar" />
         <activity android:name=".AdminChatActivity" android:exported="false" android:screenOrientation="portrait" android:theme="@style/Theme.Market.NoActionBar" />
+        <activity android:name=".VerificationActivity" android:exported="false" android:screenOrientation="portrait" android:theme="@style/Theme.Market.NoActionBar" />
+        <activity android:name=".ForgotPasswordActivity" android:exported="false" android:screenOrientation="portrait" android:theme="@style/Theme.Market.NoActionBar" />
 
     </application>
 </manifest>

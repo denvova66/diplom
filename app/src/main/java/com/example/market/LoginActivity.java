@@ -6,6 +6,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -27,7 +28,6 @@ public class LoginActivity extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
         mAuth.getFirebaseAuthSettings().setAppVerificationDisabledForTesting(true);
 
-        // Проверяем текущего пользователя
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser != null && currentUser.isEmailVerified()) {
             startActivity(new Intent(this, MainActivity.class));
@@ -54,6 +54,13 @@ public class LoginActivity extends AppCompatActivity {
                 startActivity(new Intent(this, RegisterActivity.class));
             });
         }
+
+        TextView forgotPasswordButton = findViewById(R.id.forgotPasswordButton);
+        if (forgotPasswordButton != null) {
+            forgotPasswordButton.setOnClickListener(v -> {
+                startActivity(new Intent(LoginActivity.this, ForgotPasswordActivity.class));
+            });
+        }
     }
 
     private void loginUser() {
@@ -61,11 +68,11 @@ public class LoginActivity extends AppCompatActivity {
         String password = passwordEditText.getText().toString().trim();
 
         if (email.isEmpty()) {
-            Toast.makeText(this, "Введите email", Toast.LENGTH_SHORT).show();
+            emailEditText.setError("Введите email");
             return;
         }
         if (password.isEmpty()) {
-            Toast.makeText(this, "Введите пароль", Toast.LENGTH_SHORT).show();
+            passwordEditText.setError("Введите пароль");
             return;
         }
 
@@ -80,7 +87,6 @@ public class LoginActivity extends AppCompatActivity {
                     if (task.isSuccessful()) {
                         FirebaseUser user = mAuth.getCurrentUser();
                         if (user != null) {
-                            // Проверяем подтверждение почты
                             user.reload().addOnCompleteListener(reloadTask -> {
                                 if (user.isEmailVerified()) {
                                     UserManager.init(LoginActivity.this);
@@ -91,7 +97,7 @@ public class LoginActivity extends AppCompatActivity {
                                     });
                                 } else {
                                     Toast.makeText(LoginActivity.this,
-                                            "Подтвердите почту перед входом! Письмо отправлено на " + user.getEmail(),
+                                            "Подтвердите почту перед входом!",
                                             Toast.LENGTH_LONG).show();
                                     mAuth.signOut();
                                     startActivity(new Intent(LoginActivity.this, VerificationActivity.class));
