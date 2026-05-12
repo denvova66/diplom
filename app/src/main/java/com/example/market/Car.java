@@ -16,6 +16,7 @@ public class Car implements Serializable {
     private String description;
     private String ownerId;
     private List<String> imageUrls;
+    private List<String> imagePaths;
     private Date createdAt;
     private boolean isFavorite;
     private boolean isLocal;
@@ -25,13 +26,13 @@ public class Car implements Serializable {
         this.brand = "";
         this.model = "";
         this.imageUrls = new ArrayList<>();
+        this.imagePaths = new ArrayList<>();
         this.createdAt = new Date();
         this.isLocal = false;
         this.description = "";
         this.ownerId = "";
     }
 
-    // Геттеры и сеттеры
     public String getId() { return id != null ? id : ""; }
     public void setId(String id) { this.id = id; }
 
@@ -61,6 +62,9 @@ public class Car implements Serializable {
 
     public List<String> getImageUrls() {
         if (imageUrls == null) imageUrls = new ArrayList<>();
+        if (imageUrls.isEmpty() && imagePaths != null && !imagePaths.isEmpty()) {
+            return new ArrayList<>(imagePaths);
+        }
         return imageUrls;
     }
 
@@ -69,22 +73,27 @@ public class Car implements Serializable {
     }
 
     public String getImageUrl() {
-        if (imageUrls != null && !imageUrls.isEmpty()) {
-            return imageUrls.get(0);
+        if (imageUrls != null) {
+            for (String url : imageUrls) {
+                if (url != null && !url.isEmpty() && !url.equals("placeholder")
+                        && (url.startsWith("https://") || url.startsWith("http://"))) {
+                    return url;
+                }
+            }
+        }
+        if (imagePaths != null) {
+            for (String path : imagePaths) {
+                if (path != null && !path.isEmpty() && !path.equals("placeholder")
+                        && (path.startsWith("https://") || path.startsWith("http://"))) {
+                    return path;
+                }
+            }
         }
         return "";
     }
 
-    public void setImageUrl(String imageUrl) {
-        if (this.imageUrls == null) {
-            this.imageUrls = new ArrayList<>();
-        } else {
-            this.imageUrls.clear();
-        }
-        if (imageUrl != null && !imageUrl.isEmpty()) {
-            this.imageUrls.add(imageUrl);
-        }
-    }
+    public List<String> getImagePaths() { return imagePaths; }
+    public void setImagePaths(List<String> imagePaths) { this.imagePaths = imagePaths; }
 
     public Date getCreatedAt() {
         if (createdAt == null) createdAt = new Date();
@@ -99,12 +108,12 @@ public class Car implements Serializable {
     public void setLocal(boolean local) { isLocal = local; }
 
     public String getFullName() {
-        String brandStr = getBrand();
-        String modelStr = getModel();
-        if (brandStr.isEmpty() && modelStr.isEmpty()) return "";
-        if (brandStr.isEmpty()) return modelStr;
-        if (modelStr.isEmpty()) return brandStr;
-        return brandStr + " " + modelStr;
+        String b = getBrand();
+        String m = getModel();
+        if (b.isEmpty() && m.isEmpty()) return "";
+        if (b.isEmpty()) return m;
+        if (m.isEmpty()) return b;
+        return b + " " + m;
     }
 
     @Override

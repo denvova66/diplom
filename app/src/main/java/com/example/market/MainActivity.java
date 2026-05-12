@@ -6,6 +6,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -88,7 +89,7 @@ public class MainActivity extends AppCompatActivity {
         setupListeners();
         setupNavigationDrawer();
         setupBottomNavigation();
-        loadCars();
+        loadCarsLive();
         loadUserData();
     }
 
@@ -132,8 +133,7 @@ public class MainActivity extends AppCompatActivity {
             menuButton.setOnClickListener(v -> {
                 if (drawerLayout.isDrawerOpen(navigationView))
                     drawerLayout.closeDrawer(navigationView);
-                else
-                    drawerLayout.openDrawer(navigationView);
+                else drawerLayout.openDrawer(navigationView);
             });
         }
 
@@ -201,7 +201,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // ==================== BRAND BOTTOM SHEET ====================
     private void showBrandBottomSheet() {
         BottomSheetDialog dialog = new BottomSheetDialog(this);
         View view = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_brand, null);
@@ -210,27 +209,20 @@ public class MainActivity extends AppCompatActivity {
         RecyclerView allRecycler = view.findViewById(R.id.allBrandsRecycler);
         com.google.android.flexbox.FlexboxLayout popularContainer = view.findViewById(R.id.popularBrandsContainer);
 
-        String[] popularBrands = {"BMW", "Mercedes-Benz", "Audi", "Toyota", "Kia",
-                "Hyundai", "Volkswagen", "Lada (ВАЗ)", "Renault", "Nissan"};
+        String[] popularBrands = {"BMW", "Mercedes-Benz", "Audi", "Toyota", "Kia", "Hyundai", "Volkswagen", "Lada (ВАЗ)", "Renault", "Nissan"};
 
         if (popularContainer != null) {
             popularContainer.removeAllViews();
             for (String brand : popularBrands) {
-                TextView chip = (TextView) LayoutInflater.from(this)
-                        .inflate(R.layout.item_brand_chip, popularContainer, false);
+                TextView chip = (TextView) LayoutInflater.from(this).inflate(R.layout.item_brand_chip, popularContainer, false);
                 chip.setText(brand);
                 chip.setOnClickListener(v -> {
-                    selectedBrand = brand;
-                    selectedModel = null;
-                    selectedBody = null;
+                    selectedBrand = brand; selectedModel = null; selectedBody = null;
                     chipBrand.setText(brand);
                     chipBrand.setChipBackgroundColorResource(R.color.red_light);
-                    chipModel.setText("Модель ▾");
-                    chipModel.setChipBackgroundColorResource(android.R.color.transparent);
-                    chipBody.setText("Кузов ▾");
-                    chipBody.setChipBackgroundColorResource(android.R.color.transparent);
-                    dialog.dismiss();
-                    applyFilters();
+                    chipModel.setText("Модель ▾"); chipModel.setChipBackgroundColorResource(android.R.color.transparent);
+                    chipBody.setText("Кузов ▾"); chipBody.setChipBackgroundColorResource(android.R.color.transparent);
+                    dialog.dismiss(); applyFilters();
                 });
                 popularContainer.addView(chip);
             }
@@ -238,46 +230,29 @@ public class MainActivity extends AppCompatActivity {
 
         List<String> allBrandsList = BrandData.getAllBrands();
         BrandAdapter allAdapter = new BrandAdapter(allBrandsList.toArray(new String[0]), brand -> {
-            selectedBrand = brand;
-            selectedModel = null;
-            selectedBody = null;
-            chipBrand.setText(brand);
-            chipBrand.setChipBackgroundColorResource(R.color.red_light);
-            chipModel.setText("Модель ▾");
-            chipModel.setChipBackgroundColorResource(android.R.color.transparent);
-            chipBody.setText("Кузов ▾");
-            chipBody.setChipBackgroundColorResource(android.R.color.transparent);
-            dialog.dismiss();
-            applyFilters();
+            selectedBrand = brand; selectedModel = null; selectedBody = null;
+            chipBrand.setText(brand); chipBrand.setChipBackgroundColorResource(R.color.red_light);
+            chipModel.setText("Модель ▾"); chipModel.setChipBackgroundColorResource(android.R.color.transparent);
+            chipBody.setText("Кузов ▾"); chipBody.setChipBackgroundColorResource(android.R.color.transparent);
+            dialog.dismiss(); applyFilters();
         });
 
-        if (allRecycler != null) {
-            allRecycler.setLayoutManager(new LinearLayoutManager(this));
-            allRecycler.setAdapter(allAdapter);
-        }
+        if (allRecycler != null) { allRecycler.setLayoutManager(new LinearLayoutManager(this)); allRecycler.setAdapter(allAdapter); }
 
         view.findViewById(R.id.resetBrandButton).setOnClickListener(v -> {
-            selectedBrand = null;
-            selectedModel = null;
-            selectedBody = null;
-            chipBrand.setText("Марка ▾");
-            chipBrand.setChipBackgroundColorResource(android.R.color.transparent);
-            chipModel.setText("Модель ▾");
-            chipModel.setChipBackgroundColorResource(android.R.color.transparent);
-            chipBody.setText("Кузов ▾");
-            chipBody.setChipBackgroundColorResource(android.R.color.transparent);
-            dialog.dismiss();
-            applyFilters();
+            selectedBrand = null; selectedModel = null; selectedBody = null;
+            chipBrand.setText("Марка ▾"); chipBrand.setChipBackgroundColorResource(android.R.color.transparent);
+            chipModel.setText("Модель ▾"); chipModel.setChipBackgroundColorResource(android.R.color.transparent);
+            chipBody.setText("Кузов ▾"); chipBody.setChipBackgroundColorResource(android.R.color.transparent);
+            dialog.dismiss(); applyFilters();
         });
 
         searchBrand.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
-                String searchText = s.toString().toLowerCase().trim();
+                String st = s.toString().toLowerCase().trim();
                 List<String> filtered = new ArrayList<>();
-                for (String brand : allBrandsList) {
-                    if (brand.toLowerCase().contains(searchText)) filtered.add(brand);
-                }
+                for (String b : allBrandsList) if (b.toLowerCase().contains(st)) filtered.add(b);
                 allAdapter.updateData(filtered.toArray(new String[0]));
             }
             @Override public void afterTextChanged(Editable s) {}
@@ -287,18 +262,12 @@ public class MainActivity extends AppCompatActivity {
         dialog.show();
     }
 
-    // ==================== MODEL BOTTOM SHEET ====================
     private void showModelBottomSheet() {
-        if (selectedBrand == null) {
-            Toast.makeText(this, "Сначала выберите марку", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
+        if (selectedBrand == null) { Toast.makeText(this, "Сначала выберите марку", Toast.LENGTH_SHORT).show(); return; }
         BottomSheetDialog dialog = new BottomSheetDialog(this);
         View view = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_simple_list, null);
         TextView title = view.findViewById(R.id.titleText);
         RecyclerView recycler = view.findViewById(R.id.simpleRecycler);
-
         title.setText("Выберите модель " + selectedBrand);
 
         List<String> models = BrandData.getModelNames(selectedBrand);
@@ -306,40 +275,27 @@ public class MainActivity extends AppCompatActivity {
 
         SimpleListAdapter adapter = new SimpleListAdapter(models, item -> {
             if (item.equals("Все модели")) {
-                selectedModel = null;
-                selectedBody = null;
-                chipModel.setText("Модель ▾");
-                chipModel.setChipBackgroundColorResource(android.R.color.transparent);
-                chipBody.setText("Кузов ▾");
-                chipBody.setChipBackgroundColorResource(android.R.color.transparent);
-                dialog.dismiss();
-                applyFilters();
+                selectedModel = null; selectedBody = null;
+                chipModel.setText("Модель ▾"); chipModel.setChipBackgroundColorResource(android.R.color.transparent);
+                chipBody.setText("Кузов ▾"); chipBody.setChipBackgroundColorResource(android.R.color.transparent);
+                dialog.dismiss(); applyFilters();
             } else {
                 selectedModel = item;
-                chipModel.setText(item);
-                chipModel.setChipBackgroundColorResource(R.color.red_light);
-                dialog.dismiss();
-                showBodyBottomSheet();
+                chipModel.setText(item); chipModel.setChipBackgroundColorResource(R.color.red_light);
+                dialog.dismiss(); showBodyBottomSheet();
             }
         });
 
-        if (recycler != null) {
-            recycler.setLayoutManager(new LinearLayoutManager(this));
-            recycler.setAdapter(adapter);
-        }
-        dialog.setContentView(view);
-        dialog.show();
+        if (recycler != null) { recycler.setLayoutManager(new LinearLayoutManager(this)); recycler.setAdapter(adapter); }
+        dialog.setContentView(view); dialog.show();
     }
 
-    // ==================== BODY BOTTOM SHEET ====================
     private void showBodyBottomSheet() {
         if (selectedBrand == null || selectedModel == null) return;
-
         BottomSheetDialog dialog = new BottomSheetDialog(this);
         View view = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_simple_list, null);
         TextView title = view.findViewById(R.id.titleText);
         RecyclerView recycler = view.findViewById(R.id.simpleRecycler);
-
         title.setText(selectedModel + " - выберите кузов");
 
         List<String> bodies = BrandData.getBodiesForModel(selectedBrand, selectedModel);
@@ -348,26 +304,18 @@ public class MainActivity extends AppCompatActivity {
         SimpleListAdapter adapter = new SimpleListAdapter(bodies, item -> {
             if (item.equals("Все кузова")) {
                 selectedBody = null;
-                chipBody.setText("Кузов ▾");
-                chipBody.setChipBackgroundColorResource(android.R.color.transparent);
+                chipBody.setText("Кузов ▾"); chipBody.setChipBackgroundColorResource(android.R.color.transparent);
             } else {
                 selectedBody = item;
-                chipBody.setText(item);
-                chipBody.setChipBackgroundColorResource(R.color.red_light);
+                chipBody.setText(item); chipBody.setChipBackgroundColorResource(R.color.red_light);
             }
-            dialog.dismiss();
-            applyFilters();
+            dialog.dismiss(); applyFilters();
         });
 
-        if (recycler != null) {
-            recycler.setLayoutManager(new LinearLayoutManager(this));
-            recycler.setAdapter(adapter);
-        }
-        dialog.setContentView(view);
-        dialog.show();
+        if (recycler != null) { recycler.setLayoutManager(new LinearLayoutManager(this)); recycler.setAdapter(adapter); }
+        dialog.setContentView(view); dialog.show();
     }
 
-    // ==================== YEAR BOTTOM SHEET ====================
     private void showYearBottomSheet() {
         BottomSheetDialog dialog = new BottomSheetDialog(this);
         View view = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_year, null);
@@ -392,27 +340,20 @@ public class MainActivity extends AppCompatActivity {
         if (applyButton != null) {
             applyButton.setOnClickListener(v -> {
                 if (selectedYearFrom == null && selectedYearTo == null) {
-                    chipYear.setText("Год ▾");
-                    chipYear.setChipBackgroundColorResource(android.R.color.transparent);
+                    chipYear.setText("Год ▾"); chipYear.setChipBackgroundColorResource(android.R.color.transparent);
                 } else if (selectedYearFrom != null && selectedYearTo != null) {
-                    chipYear.setText(selectedYearFrom + "–" + selectedYearTo);
-                    chipYear.setChipBackgroundColorResource(R.color.red_light);
+                    chipYear.setText(selectedYearFrom + "–" + selectedYearTo); chipYear.setChipBackgroundColorResource(R.color.red_light);
                 } else if (selectedYearFrom != null) {
-                    chipYear.setText("от " + selectedYearFrom);
-                    chipYear.setChipBackgroundColorResource(R.color.red_light);
+                    chipYear.setText("от " + selectedYearFrom); chipYear.setChipBackgroundColorResource(R.color.red_light);
                 } else {
-                    chipYear.setText("до " + selectedYearTo);
-                    chipYear.setChipBackgroundColorResource(R.color.red_light);
+                    chipYear.setText("до " + selectedYearTo); chipYear.setChipBackgroundColorResource(R.color.red_light);
                 }
-                dialog.dismiss();
-                applyFilters();
+                dialog.dismiss(); applyFilters();
             });
         }
-        dialog.setContentView(view);
-        dialog.show();
+        dialog.setContentView(view); dialog.show();
     }
 
-    // ==================== PRICE BOTTOM SHEET ====================
     private void showPriceBottomSheet() {
         BottomSheetDialog dialog = new BottomSheetDialog(this);
         View view = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_price, null);
@@ -436,21 +377,17 @@ public class MainActivity extends AppCompatActivity {
                 selectedPriceFrom = fs.isEmpty() ? null : Double.parseDouble(fs);
                 selectedPriceTo = ts.isEmpty() ? null : Double.parseDouble(ts);
                 if (selectedPriceFrom == null && selectedPriceTo == null) {
-                    chipPrice.setText("Цена ▾");
-                    chipPrice.setChipBackgroundColorResource(android.R.color.transparent);
+                    chipPrice.setText("Цена ▾"); chipPrice.setChipBackgroundColorResource(android.R.color.transparent);
                 } else {
                     chipPrice.setText((selectedPriceFrom != null ? formatPrice(selectedPriceFrom) : "0") + " – " + (selectedPriceTo != null ? formatPrice(selectedPriceTo) : "∞"));
                     chipPrice.setChipBackgroundColorResource(R.color.red_light);
                 }
-                dialog.dismiss();
-                applyFilters();
+                dialog.dismiss(); applyFilters();
             });
         }
-        dialog.setContentView(view);
-        dialog.show();
+        dialog.setContentView(view); dialog.show();
     }
 
-    // ==================== MILEAGE BOTTOM SHEET ====================
     private void showMileageBottomSheet() {
         BottomSheetDialog dialog = new BottomSheetDialog(this);
         View view = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_mileage, null);
@@ -467,36 +404,30 @@ public class MainActivity extends AppCompatActivity {
                 case "Свыше 200 000 км": selectedMileageFrom = 200000; selectedMileageTo = Integer.MAX_VALUE; break;
             }
             if (selectedMileageFrom == null) {
-                chipMileage.setText("Пробег ▾");
-                chipMileage.setChipBackgroundColorResource(android.R.color.transparent);
+                chipMileage.setText("Пробег ▾"); chipMileage.setChipBackgroundColorResource(android.R.color.transparent);
             } else {
-                chipMileage.setText(item);
-                chipMileage.setChipBackgroundColorResource(R.color.red_light);
+                chipMileage.setText(item); chipMileage.setChipBackgroundColorResource(R.color.red_light);
             }
-            dialog.dismiss();
-            applyFilters();
+            dialog.dismiss(); applyFilters();
         });
         if (recycler != null) { recycler.setLayoutManager(new LinearLayoutManager(this)); recycler.setAdapter(adapter); }
-        dialog.setContentView(view);
-        dialog.show();
+        dialog.setContentView(view); dialog.show();
     }
 
     private void showSortOptions() {
         String[] options = {"По умолчанию", "Цена ↑", "Цена ↓", "Год ↑", "Год ↓", "Пробег ↑", "Пробег ↓"};
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Сортировка")
-                .setItems(options, (dialog, which) -> {
-                    switch (which) {
-                        case 0: loadCars(); break;
-                        case 1: Collections.sort(filteredCars, (a,b) -> Double.compare(a.getPrice(), b.getPrice())); break;
-                        case 2: Collections.sort(filteredCars, (a,b) -> Double.compare(b.getPrice(), a.getPrice())); break;
-                        case 3: Collections.sort(filteredCars, (a,b) -> Integer.compare(a.getYear(), b.getYear())); break;
-                        case 4: Collections.sort(filteredCars, (a,b) -> Integer.compare(b.getYear(), a.getYear())); break;
-                        case 5: Collections.sort(filteredCars, (a,b) -> Integer.compare(a.getMileage(), b.getMileage())); break;
-                        case 6: Collections.sort(filteredCars, (a,b) -> Integer.compare(b.getMileage(), a.getMileage())); break;
-                    }
-                    if (carAdapter != null) carAdapter.updateList(new ArrayList<>(filteredCars));
-                }).show();
+        new androidx.appcompat.app.AlertDialog.Builder(this).setTitle("Сортировка").setItems(options, (dialog, which) -> {
+            switch (which) {
+                case 0: loadCarsLive(); break;
+                case 1: Collections.sort(filteredCars, (a,b) -> Double.compare(a.getPrice(), b.getPrice())); break;
+                case 2: Collections.sort(filteredCars, (a,b) -> Double.compare(b.getPrice(), a.getPrice())); break;
+                case 3: Collections.sort(filteredCars, (a,b) -> Integer.compare(a.getYear(), b.getYear())); break;
+                case 4: Collections.sort(filteredCars, (a,b) -> Integer.compare(b.getYear(), a.getYear())); break;
+                case 5: Collections.sort(filteredCars, (a,b) -> Integer.compare(a.getMileage(), b.getMileage())); break;
+                case 6: Collections.sort(filteredCars, (a,b) -> Integer.compare(b.getMileage(), a.getMileage())); break;
+            }
+            if (carAdapter != null) carAdapter.updateList(new ArrayList<>(filteredCars));
+        }).show();
     }
 
     private String formatPrice(double price) {
@@ -526,15 +457,17 @@ public class MainActivity extends AppCompatActivity {
         updateUI();
     }
 
-    private void loadCars() {
+    // Realtime обновление
+    private void loadCarsLive() {
         showLoading(true);
-        allCars.clear();
-        List<Car> localCars = LocalCarManager.loadCars();
-        if (localCars != null && !localCars.isEmpty()) allCars.addAll(localCars);
-        db.collection("cars").orderBy("createdAt", Query.Direction.DESCENDING).get()
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful() && task.getResult() != null) {
-                        for (DocumentSnapshot doc : task.getResult()) {
+        db.collection("cars").orderBy("createdAt", Query.Direction.DESCENDING)
+                .addSnapshotListener((value, error) -> {
+                    if (error != null) { showLoading(false); return; }
+                    allCars.clear();
+                    List<Car> localCars = LocalCarManager.loadCars();
+                    if (localCars != null) allCars.addAll(localCars);
+                    if (value != null) {
+                        for (DocumentSnapshot doc : value) {
                             Car car = documentToCar(doc);
                             if (car != null && !containsCar(allCars, car)) allCars.add(car);
                         }
@@ -542,22 +475,21 @@ public class MainActivity extends AppCompatActivity {
                     Favorites.syncWithLoadedCars(allCars);
                     applyFilters();
                     showLoading(false);
-                })
-                .addOnFailureListener(e -> { applyFilters(); showLoading(false); });
+                });
     }
 
     private void loadUserData() {
-        FirebaseUser firebaseUser = mAuth.getCurrentUser();
-        if (firebaseUser != null && navigationView != null) {
-            UserManager.loadUserFromFirebase(firebaseUser, user -> {
+        FirebaseUser fu = mAuth.getCurrentUser();
+        if (fu != null && navigationView != null) {
+            UserManager.loadUserFromFirebase(fu, user -> {
                 if (user != null) updateNavigationHeader(user);
                 else {
                     View header = navigationView.getHeaderView(0);
                     if (header != null) {
-                        TextView name = header.findViewById(R.id.userNameText);
-                        TextView email = header.findViewById(R.id.userEmailText);
-                        if (name != null) name.setText("Пользователь");
-                        if (email != null && firebaseUser.getEmail() != null) email.setText(firebaseUser.getEmail());
+                        TextView n = header.findViewById(R.id.userNameText);
+                        TextView e = header.findViewById(R.id.userEmailText);
+                        if (n != null) n.setText("Пользователь");
+                        if (e != null && fu.getEmail() != null) e.setText(fu.getEmail());
                     }
                 }
             });
@@ -568,10 +500,10 @@ public class MainActivity extends AppCompatActivity {
         if (navigationView == null || user == null) return;
         View header = navigationView.getHeaderView(0);
         if (header == null) return;
-        TextView name = header.findViewById(R.id.userNameText);
-        TextView email = header.findViewById(R.id.userEmailText);
-        if (name != null) name.setText(user.getFullName() != null && !user.getFullName().trim().isEmpty() ? user.getFullName() : "Пользователь");
-        if (email != null) email.setText(user.getEmail() != null ? user.getEmail() : "");
+        TextView n = header.findViewById(R.id.userNameText);
+        TextView e = header.findViewById(R.id.userEmailText);
+        if (n != null) n.setText(user.getFullName() != null && !user.getFullName().trim().isEmpty() ? user.getFullName() : "Пользователь");
+        if (e != null) e.setText(user.getEmail() != null ? user.getEmail() : "");
     }
 
     private void updateUI() {
@@ -596,14 +528,14 @@ public class MainActivity extends AppCompatActivity {
             car.setModel(doc.getString("model"));
             Long y = doc.getLong("year"); if (y != null) car.setYear(y.intValue());
             Long m = doc.getLong("mileage"); if (m != null) car.setMileage(m.intValue());
-            Double e = doc.getDouble("engineVolume"); if (e != null) car.setEngineVolume(e);
+            Double eng = doc.getDouble("engineVolume"); if (eng != null) car.setEngineVolume(eng);
             Double p = doc.getDouble("price");
             if (p != null) car.setPrice(p);
             else { Long pl = doc.getLong("price"); if (pl != null) car.setPrice(pl.doubleValue()); }
             car.setDescription(doc.getString("description"));
             car.setOwnerId(doc.getString("ownerId"));
-            List<String> images = (List<String>) doc.get("imageUrls");
-            if (images != null) car.setImageUrls(new ArrayList<>(images));
+            List<String> imgs = (List<String>) doc.get("imageUrls");
+            if (imgs != null) car.setImageUrls(new ArrayList<>(imgs));
             Date d = doc.getDate("createdAt"); if (d != null) car.setCreatedAt(d);
             car.setFavorite(Favorites.isFavorite(car));
             return car;
@@ -626,25 +558,19 @@ public class MainActivity extends AppCompatActivity {
 
     private void logout() {
         UserManager.setUserOffline();
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Выход").setMessage("Вы уверены?")
-                .setPositiveButton("Выйти", (d, w) -> {
-                    mAuth.signOut(); UserManager.logout();
-                    startActivity(new Intent(this, LoginActivity.class));
-                    finishAffinity();
-                }).setNegativeButton("Отмена", null).show();
+        new androidx.appcompat.app.AlertDialog.Builder(this).setTitle("Выход").setMessage("Вы уверены?")
+                .setPositiveButton("Выйти", (d, w) -> { mAuth.signOut(); UserManager.logout(); startActivity(new Intent(this, LoginActivity.class)); finishAffinity(); })
+                .setNegativeButton("Отмена", null).show();
     }
 
     @Override protected void onResume() {
         super.onResume();
-        loadCars(); loadUserData();
+        loadCarsLive(); loadUserData();
         if (bottomNavigationView != null) bottomNavigationView.setSelectedItemId(R.id.navigation_home);
     }
 
-    // ==================== АДАПТЕРЫ ====================
     class BrandAdapter extends RecyclerView.Adapter<BrandAdapter.ViewHolder> {
-        private String[] items;
-        private OnItemClickListener listener;
+        private String[] items; private OnItemClickListener listener;
         interface OnItemClickListener { void onClick(String item); }
         BrandAdapter(String[] items, OnItemClickListener listener) { this.items = items; this.listener = listener; }
         void updateData(String[] newItems) { this.items = newItems; notifyDataSetChanged(); }
@@ -652,32 +578,21 @@ public class MainActivity extends AppCompatActivity {
             return new ViewHolder(LayoutInflater.from(parent.getContext()).inflate(R.layout.item_brand_list, parent, false));
         }
         @Override public void onBindViewHolder(ViewHolder holder, int pos) {
-            holder.text.setText(items[pos]);
-            holder.itemView.setOnClickListener(v -> listener.onClick(items[pos]));
+            holder.text.setText(items[pos]); holder.itemView.setOnClickListener(v -> listener.onClick(items[pos]));
         }
         @Override public int getItemCount() { return items != null ? items.length : 0; }
-        class ViewHolder extends RecyclerView.ViewHolder {
-            TextView text;
-            ViewHolder(View v) { super(v); text = v.findViewById(R.id.brandNameText); }
-        }
+        class ViewHolder extends RecyclerView.ViewHolder { TextView text; ViewHolder(View v) { super(v); text = v.findViewById(R.id.brandNameText); } }
     }
 
     class SimpleListAdapter extends RecyclerView.Adapter<SimpleListAdapter.VH> {
-        private List<String> items;
-        private OnItemClick listener;
+        private List<String> items; private OnItemClick listener;
         interface OnItemClick { void onClick(String item); }
         SimpleListAdapter(List<String> items, OnItemClick listener) { this.items = items; this.listener = listener; }
         @Override public VH onCreateViewHolder(ViewGroup p, int t) {
             return new VH(LayoutInflater.from(p.getContext()).inflate(android.R.layout.simple_list_item_1, p, false));
         }
-        @Override public void onBindViewHolder(VH h, int pos) {
-            h.text.setText(items.get(pos));
-            h.itemView.setOnClickListener(v -> listener.onClick(items.get(pos)));
-        }
+        @Override public void onBindViewHolder(VH h, int pos) { h.text.setText(items.get(pos)); h.itemView.setOnClickListener(v -> listener.onClick(items.get(pos))); }
         @Override public int getItemCount() { return items != null ? items.size() : 0; }
-        class VH extends RecyclerView.ViewHolder {
-            TextView text;
-            VH(View v) { super(v); text = v.findViewById(android.R.id.text1); }
-        }
+        class VH extends RecyclerView.ViewHolder { TextView text; VH(View v) { super(v); text = v.findViewById(android.R.id.text1); } }
     }
 }

@@ -25,11 +25,12 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
+            <!-- Галерея изображений - большое фото -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/carImagesRecyclerView"
                 android:layout_width="match_parent"
                 android:layout_height="280dp"
-                android:layout_margin="16dp" />
+                android:layout_marginBottom="16dp" />
 
             <LinearLayout
                 android:layout_width="match_parent"

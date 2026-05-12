@@ -2,6 +2,7 @@ package com.example.market;
 
 import android.content.Context;
 import android.content.Intent;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,12 +15,13 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
 public class CarAdapter extends RecyclerView.Adapter<CarAdapter.CarViewHolder> {
+    private static final String TAG = "CarAdapter";
     private List<Car> carList;
     private Context context;
 
@@ -28,8 +30,7 @@ public class CarAdapter extends RecyclerView.Adapter<CarAdapter.CarViewHolder> {
         this.context = context;
     }
 
-    @NonNull
-    @Override
+    @NonNull @Override
     public CarViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         return new CarViewHolder(LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.item_car, parent, false));
@@ -65,7 +66,6 @@ public class CarAdapter extends RecyclerView.Adapter<CarAdapter.CarViewHolder> {
             engineText = v.findViewById(R.id.engineText);
             priceText = v.findViewById(R.id.priceText);
             favoriteButton = v.findViewById(R.id.favoriteButton);
-
             v.setOnClickListener(cv -> {
                 int pos = getAdapterPosition();
                 if (pos != RecyclerView.NO_POSITION && carList != null && pos < carList.size()) {
@@ -82,22 +82,15 @@ public class CarAdapter extends RecyclerView.Adapter<CarAdapter.CarViewHolder> {
             mileageText.setText(car.getMileage() + " км");
             engineText.setText(car.getEngineVolume() + " л");
             priceText.setText(String.format("%,.0f ₽", car.getPrice()));
-
             loadImage(car);
-
             if (favoriteButton != null) {
                 favoriteButton.setImageResource(car.isFavorite() ? R.drawable.ic_favorite_filled : R.drawable.ic_favorite);
                 favoriteButton.setOnClickListener(v -> {
-                    if (car.isFavorite()) {
-                        Favorites.removeFavoriteCar(car);
-                        car.setFavorite(false);
-                        favoriteButton.setImageResource(R.drawable.ic_favorite);
-                    } else {
-                        Favorites.addFavoriteCar(car);
-                        car.setFavorite(true);
-                        favoriteButton.setImageResource(R.drawable.ic_favorite_filled);
-                    }
-                    Toast.makeText(context, car.isFavorite() ? "Добавлено" : "Удалено", Toast.LENGTH_SHORT).show();
+                    car.setFavorite(!car.isFavorite());
+                    favoriteButton.setImageResource(car.isFavorite() ? R.drawable.ic_favorite_filled : R.drawable.ic_favorite);
+                    if (car.isFavorite()) Favorites.addFavoriteCar(car);
+                    else Favorites.removeFavoriteCar(car);
+                    Toast.makeText(context, car.isFavorite() ? "В избранном" : "Удалено", Toast.LENGTH_SHORT).show();
                 });
             }
         }
@@ -105,23 +98,45 @@ public class CarAdapter extends RecyclerView.Adapter<CarAdapter.CarViewHolder> {
         void loadImage(Car car) {
             if (carImage == null) return;
 
-            // Пробуем загрузить первое фото
-            String firstPath = null;
-            if (car.getImageUrls() != null && !car.getImageUrls().isEmpty()) {
-                firstPath = car.getImageUrls().get(0);
+            // Берем ВСЕ URL из списка
+            List<String> allUrls = car.getImageUrls();
+            String imageUrl = null;
+
+            // Ищем первый валидный URL
+            if (allUrls != null) {
+                for (String url : allUrls) {
+                    Log.d(TAG, "Checking URL: " + url);
+                    if (url != null && !url.isEmpty() && !url.equals("placeholder")
+                            && !url.startsWith("/") && !url.startsWith("file://")
+                            && !url.startsWith("content://")) {
+                        imageUrl = url;
+                        break;
+                    }
+                }
             }
 
-            if (firstPath != null && !firstPath.isEmpty() && !firstPath.equals("placeholder")) {
-                File imageFile = new File(firstPath);
-                if (imageFile.exists()) {
-                    Glide.with(context).load(imageFile).centerCrop().placeholder(R.drawable.ic_car_placeholder).error(R.drawable.ic_car_placeholder).into(carImage);
-                } else if (firstPath.startsWith("https://")) {
-                    // На всякий случай поддерживаем старые URL
-                    Glide.with(context).load(firstPath).centerCrop().placeholder(R.drawable.ic_car_placeholder).error(R.drawable.ic_car_placeholder).into(carImage);
-                } else {
-                    carImage.setImageResource(R.drawable.ic_car_placeholder);
+            // Если не нашли в imageUrls - пробуем imagePaths
+            if (imageUrl == null && car.getImagePaths() != null) {
+                for (String path : car.getImagePaths()) {
+                    if (path != null && path.startsWith("https://")) {
+                        imageUrl = path;
+                        break;
+                    }
                 }
+            }
+
+            Log.d(TAG, "Final image URL for " + car.getFullName() + ": " + imageUrl);
+
+            if (imageUrl != null && !imageUrl.isEmpty()) {
+                Glide.with(context)
+                        .load(imageUrl)
+                        .placeholder(R.drawable.ic_car_placeholder)
+                        .error(R.drawable.ic_car_placeholder)
+                        .diskCacheStrategy(DiskCacheStrategy.ALL)
+                        .centerCrop()
+                        .into(carImage);
             } else {
+                Log.w(TAG, "No valid URL found, using placeholder");
                 carImage.setImageResource(R.drawable.ic_car_placeholder);
             }
         }

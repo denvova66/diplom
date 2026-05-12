@@ -1,9 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="48dp"
-    android:height="48dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
+    android:width="200dp"
+    android:height="150dp"
+    android:viewportWidth="200"
+    android:viewportHeight="150">
+
+    <!-- Фон -->
     <path
-        android:fillColor="#CCCCCC"
-        android:pathData="M18.92,6.01C18.72,5.42 18.16,5 17.5,5h-11c-0.66,0 -1.21,0.42 -1.42,1.01L3,12v8c0,0.55 0.45,1 1,1h1c0.55,0 1,-0.45 1,-1v-1h12v1c0,0.55 0.45,1 1,1h1c0.55,0 1,-0.45 1,-1v-8l-2.08,-5.99zM6.5,16c-0.83,0 -1.5,-0.67 -1.5,-1.5S5.67,13 6.5,13s1.5,0.67 1.5,1.5S7.33,16 6.5,16zM17.5,16c-0.83,0 -1.5,-0.67 -1.5,-1.5s0.67,-1.5 1.5,-1.5s1.5,0.67 1.5,1.5S18.33,16 17.5,16zM5,11l1.5,-4.5h11L19,11H5z"/>
+        android:fillColor="#E0E0E0"
+        android:pathData="M0,0h200v150h-200z"/>
+
+    <!-- Иконка машины -->
+    <path
+        android:fillColor="#BDBDBD"
+        android:pathData="M40,80 L50,60 L150,60 L160,80 L170,80 L170,100 L160,100 L160,90 L40,90 L40,100 L30,100 L30,80 Z"/>
+
+    <!-- Колёса -->
+    <path
+        android:fillColor="#9E9E9E"
+        android:pathData="M55,100 m-12,0 a12,12 0,1,1 24,0 a12,12 0,1,1 -24,0"/>
+    <path
+        android:fillColor="#9E9E9E"
+        android:pathData="M145,100 m-12,0 a12,12 0,1,1 24,0 a12,12 0,1,1 -24,0"/>
+
+    <!-- Окна -->
+    <path
+        android:fillColor="#BDBDBD"
+        android:pathData="M65,65 L85,65 L85,80 L55,80 Z"/>
+    <path
+        android:fillColor="#BDBDBD"
+        android:pathData="M95,65 L140,65 L155,80 L95,80 Z"/>
 </vector>

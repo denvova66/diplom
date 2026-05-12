@@ -15,26 +15,20 @@ import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 public class EditCarActivity extends AppCompatActivity {
     private static final String TAG = "EditCarActivity";
@@ -45,11 +39,11 @@ public class EditCarActivity extends AppCompatActivity {
     private RecyclerView imagesRecyclerView;
     private ProgressBar progressBar;
     private List<Uri> selectedImages = new ArrayList<>();
-    private List<String> savedImagePaths = new ArrayList<>();
+    private List<String> existingUrls = new ArrayList<>();
+    private List<String> uploadedUrls = new ArrayList<>();
     private ImagePreviewAdapter imagePreviewAdapter;
     private FirebaseFirestore db;
     private String carId;
-    private Car currentCar;
 
     private ActivityResultLauncher<String[]> imagePickerLauncher;
 
@@ -66,10 +60,6 @@ public class EditCarActivity extends AppCompatActivity {
             finish();
             return;
         }
-
-        // Создаем папку для фото
-        File carsDir = new File(getFilesDir(), "car_images");
-        if (!carsDir.exists()) carsDir.mkdirs();
 
         imagePickerLauncher = registerForActivityResult(
                 new ActivityResultContracts.OpenMultipleDocuments(),
@@ -105,32 +95,37 @@ public class EditCarActivity extends AppCompatActivity {
             toolbar.setNavigationOnClickListener(v -> finish());
         }
 
-        imagePreviewAdapter = new ImagePreviewAdapter(selectedImages);
+        imagePreviewAdapter = new ImagePreviewAdapter(selectedImages, existingUrls);
         imagesRecyclerView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         imagesRecyclerView.setAdapter(imagePreviewAdapter);
 
         addImageButton.setOnClickListener(v -> imagePickerLauncher.launch(new String[]{"image/*"}));
         submitButton.setOnClickListener(v -> saveChanges());
+
+        setupInputFilters();
+    }
+
+    private void setupInputFilters() {
+        yearEditText.setFilters(new android.text.InputFilter[]{
+                new android.text.InputFilter.LengthFilter(4)
+        });
+        mileageEditText.setFilters(new android.text.InputFilter[]{
+                new android.text.InputFilter.LengthFilter(7)
+        });
+        priceEditText.setFilters(new android.text.InputFilter[]{
+                new android.text.InputFilter.LengthFilter(10)
+        });
     }
 
     private void loadCarDetails() {
         progressBar.setVisibility(View.VISIBLE);
 
-        db.collection("cars").document(carId)
-                .get()
+        db.collection("cars").document(carId).get()
                 .addOnCompleteListener(task -> {
                     progressBar.setVisibility(View.GONE);
-
                     if (task.isSuccessful() && task.getResult() != null && task.getResult().exists()) {
                         DocumentSnapshot doc = task.getResult();
-                        currentCar = documentToCar(doc);
-
-                        if (currentCar != null) {
-                            displayCarDetails();
-                        } else {
-                            Toast.makeText(this, "Ошибка загрузки данных", Toast.LENGTH_SHORT).show();
-                            finish();
-                        }
+                        displayCarDetails(doc);
                     } else {
                         Toast.makeText(this, "Автомобиль не найден", Toast.LENGTH_SHORT).show();
                         finish();
@@ -138,75 +133,42 @@ public class EditCarActivity extends AppCompatActivity {
                 })
                 .addOnFailureListener(e -> {
                     progressBar.setVisibility(View.GONE);
-                    Toast.makeText(this, "Ошибка загрузки: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                    finish();
+                    Toast.makeText(this, "Ошибка загрузки", Toast.LENGTH_SHORT).show();
                 });
     }
 
-    private Car documentToCar(DocumentSnapshot doc) {
-        try {
-            Car car = new Car();
-            car.setId(doc.getId());
-            car.setBrand(doc.getString("brand"));
-            car.setModel(doc.getString("model"));
+    @SuppressWarnings("unchecked")
+    private void displayCarDetails(DocumentSnapshot doc) {
+        brandEditText.setText(doc.getString("brand"));
+        modelEditText.setText(doc.getString("model"));
 
-            Long yearLong = doc.getLong("year");
-            if (yearLong != null) car.setYear(yearLong.intValue());
+        Long year = doc.getLong("year");
+        if (year != null) yearEditText.setText(String.valueOf(year.intValue()));
+        else yearEditText.setText(doc.getString("year"));
 
-            Long mileageLong = doc.getLong("mileage");
-            if (mileageLong != null) car.setMileage(mileageLong.intValue());
+        Long mileage = doc.getLong("mileage");
+        if (mileage != null) mileageEditText.setText(String.valueOf(mileage.intValue()));
+        else mileageEditText.setText(doc.getString("mileage"));
 
-            Double engineDouble = doc.getDouble("engineVolume");
-            if (engineDouble != null) car.setEngineVolume(engineDouble);
+        Double engine = doc.getDouble("engineVolume");
+        if (engine != null) engineEditText.setText(String.valueOf(engine));
+        else engineEditText.setText(doc.getString("engineVolume"));
 
-            Double priceDouble = doc.getDouble("price");
-            if (priceDouble != null) {
-                car.setPrice(priceDouble);
-            } else {
-                Long priceLong = doc.getLong("price");
-                if (priceLong != null) car.setPrice(priceLong.doubleValue());
-            }
-
-            car.setDescription(doc.getString("description"));
-            car.setOwnerId(doc.getString("ownerId"));
-
-            @SuppressWarnings("unchecked")
-            List<String> imagePaths = (List<String>) doc.get("imagePaths");
-            if (imagePaths != null && !imagePaths.isEmpty()) {
-                car.setImageUrls(new ArrayList<>(imagePaths));
-            } else {
-                @SuppressWarnings("unchecked")
-                List<String> imageUrls = (List<String>) doc.get("imageUrls");
-                if (imageUrls != null) {
-                    car.setImageUrls(new ArrayList<>(imageUrls));
-                }
-            }
-
-            Date createdAt = doc.getDate("createdAt");
-            if (createdAt != null) car.setCreatedAt(createdAt);
-
-            return car;
-        } catch (Exception e) {
-            Log.e(TAG, "Error converting document", e);
-            return null;
+        Double price = doc.getDouble("price");
+        if (price != null) priceEditText.setText(String.valueOf(price.intValue()));
+        else {
+            Long priceL = doc.getLong("price");
+            if (priceL != null) priceEditText.setText(String.valueOf(priceL.intValue()));
+            else priceEditText.setText(doc.getString("price"));
         }
-    }
 
-    private void displayCarDetails() {
-        if (currentCar == null) return;
+        descriptionEditText.setText(doc.getString("description"));
 
-        brandEditText.setText(currentCar.getBrand());
-        modelEditText.setText(currentCar.getModel());
-        yearEditText.setText(String.valueOf(currentCar.getYear()));
-        mileageEditText.setText(String.valueOf(currentCar.getMileage()));
-        engineEditText.setText(String.valueOf(currentCar.getEngineVolume()));
-        priceEditText.setText(String.valueOf((int) currentCar.getPrice()));
-        descriptionEditText.setText(currentCar.getDescription());
-
-        // Загружаем существующие фото
-        if (currentCar.getImageUrls() != null && !currentCar.getImageUrls().isEmpty()) {
-            savedImagePaths.clear();
-            savedImagePaths.addAll(currentCar.getImageUrls());
+        List<String> urls = (List<String>) doc.get("imageUrls");
+        if (urls != null) {
+            existingUrls.clear();
+            existingUrls.addAll(urls);
+            imagePreviewAdapter.notifyDataSetChanged();
         }
     }
 
@@ -217,7 +179,6 @@ public class EditCarActivity extends AppCompatActivity {
         String mileageStr = mileageEditText.getText().toString().trim();
         String engineStr = engineEditText.getText().toString().trim();
         String priceStr = priceEditText.getText().toString().trim();
-        String description = descriptionEditText.getText().toString().trim();
 
         if (brand.isEmpty()) { brandEditText.setError("Заполните поле"); return; }
         if (model.isEmpty()) { modelEditText.setError("Заполните поле"); return; }
@@ -227,7 +188,13 @@ public class EditCarActivity extends AppCompatActivity {
         if (priceStr.isEmpty()) { priceEditText.setError("Заполните поле"); return; }
 
         try {
-            Integer.parseInt(yearStr);
+            int year = Integer.parseInt(yearStr);
+            int currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR);
+            if (year < 1980 || year > currentYear + 1) {
+                yearEditText.setError("Введите корректный год (1980-" + (currentYear + 1) + ")");
+                yearEditText.requestFocus();
+                return;
+            }
             Integer.parseInt(mileageStr);
             Double.parseDouble(engineStr);
             Double.parseDouble(priceStr);
@@ -239,48 +206,17 @@ public class EditCarActivity extends AppCompatActivity {
         progressBar.setVisibility(View.VISIBLE);
         submitButton.setEnabled(false);
 
-        // Если есть новые фото - сохраняем их
         if (!selectedImages.isEmpty()) {
-            saveNewImages();
+            uploadedUrls.clear();
+            CloudinaryManager.uploadMultipleImages(this, selectedImages, urls -> {
+                uploadedUrls.addAll(urls);
+                updateCarInFirestore();
+            });
         } else {
+            uploadedUrls.clear();
+            uploadedUrls.addAll(existingUrls);
             updateCarInFirestore();
         }
-    }
-
-    private void saveNewImages() {
-        // Удаляем старые фото
-        if (savedImagePaths != null) {
-            for (String path : savedImagePaths) {
-                File file = new File(path);
-                if (file.exists()) file.delete();
-            }
-        }
-        savedImagePaths.clear();
-
-        for (Uri uri : selectedImages) {
-            try {
-                InputStream inputStream = getContentResolver().openInputStream(uri);
-                if (inputStream == null) continue;
-
-                String fileName = "car_" + UUID.randomUUID().toString() + ".jpg";
-                File imageFile = new File(getFilesDir(), "car_images/" + fileName);
-
-                FileOutputStream outputStream = new FileOutputStream(imageFile);
-                byte[] buffer = new byte[4096];
-                int bytesRead;
-                while ((bytesRead = inputStream.read(buffer)) != -1) {
-                    outputStream.write(buffer, 0, bytesRead);
-                }
-                inputStream.close();
-                outputStream.close();
-
-                savedImagePaths.add(imageFile.getAbsolutePath());
-            } catch (Exception e) {
-                Log.e(TAG, "Error saving image", e);
-            }
-        }
-
-        updateCarInFirestore();
     }
 
     private void updateCarInFirestore() {
@@ -292,7 +228,7 @@ public class EditCarActivity extends AppCompatActivity {
         carData.put("engineVolume", Double.parseDouble(engineEditText.getText().toString().trim()));
         carData.put("price", Double.parseDouble(priceEditText.getText().toString().trim()));
         carData.put("description", descriptionEditText.getText().toString().trim());
-        carData.put("imagePaths", savedImagePaths);
+        carData.put("imageUrls", uploadedUrls.isEmpty() ? existingUrls : uploadedUrls);
         carData.put("updatedAt", new Date());
 
         db.collection("cars").document(carId)
@@ -306,54 +242,42 @@ public class EditCarActivity extends AppCompatActivity {
                 .addOnFailureListener(e -> {
                     progressBar.setVisibility(View.GONE);
                     submitButton.setEnabled(true);
-                    Toast.makeText(this, "Ошибка сохранения: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Ошибка: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
     }
 
-    // Адаптер предпросмотра фото
     private class ImagePreviewAdapter extends RecyclerView.Adapter<ImagePreviewAdapter.ViewHolder> {
-        private List<Uri> images;
+        private List<Uri> newImages;
+        private List<String> existingUrls;
 
-        ImagePreviewAdapter(List<Uri> images) {
-            this.images = images;
+        ImagePreviewAdapter(List<Uri> newImages, List<String> existingUrls) {
+            this.newImages = newImages;
+            this.existingUrls = existingUrls;
         }
 
         @Override
         public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-            View v = LayoutInflater.from(parent.getContext())
-                    .inflate(R.layout.item_selected_image, parent, false);
-            return new ViewHolder(v);
+            return new ViewHolder(LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_selected_image, parent, false));
         }
 
         @Override
         public void onBindViewHolder(ViewHolder holder, int pos) {
-            // Показываем существующие фото
-            if (pos < savedImagePaths.size()) {
-                File file = new File(savedImagePaths.get(pos));
-                if (file.exists()) {
-                    Glide.with(EditCarActivity.this).load(file).centerCrop().into(holder.imageView);
+            if (pos < existingUrls.size()) {
+                Glide.with(EditCarActivity.this).load(existingUrls.get(pos)).fitCenter().into(holder.imageView);
+            } else {
+                int newPos = pos - existingUrls.size();
+                if (newPos < newImages.size()) {
+                    Glide.with(EditCarActivity.this).load(newImages.get(newPos)).fitCenter().into(holder.imageView);
                 }
-            }
-            // Показываем новые фото
-            else if (pos - savedImagePaths.size() < images.size()) {
-                Glide.with(EditCarActivity.this)
-                        .load(images.get(pos - savedImagePaths.size()))
-                        .centerCrop()
-                        .into(holder.imageView);
             }
 
             holder.removeButton.setOnClickListener(v -> {
-                if (pos < savedImagePaths.size()) {
-                    // Удаляем существующее фото
-                    File file = new File(savedImagePaths.get(pos));
-                    if (file.exists()) file.delete();
-                    savedImagePaths.remove(pos);
+                if (pos < existingUrls.size()) {
+                    existingUrls.remove(pos);
                 } else {
-                    // Удаляем новое фото
-                    int newPos = pos - savedImagePaths.size();
-                    if (newPos < images.size()) {
-                        images.remove(newPos);
-                    }
+                    int newPos = pos - existingUrls.size();
+                    if (newPos < newImages.size()) newImages.remove(newPos);
                 }
                 notifyDataSetChanged();
             });
@@ -361,12 +285,11 @@ public class EditCarActivity extends AppCompatActivity {
 
         @Override
         public int getItemCount() {
-            return savedImagePaths.size() + images.size();
+            return existingUrls.size() + newImages.size();
         }
 
         class ViewHolder extends RecyclerView.ViewHolder {
-            ImageView imageView;
-            ImageView removeButton;
+            ImageView imageView, removeButton;
             ViewHolder(View v) {
                 super(v);
                 imageView = v.findViewById(R.id.selectedImage);

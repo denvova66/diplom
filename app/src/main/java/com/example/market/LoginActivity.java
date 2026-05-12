@@ -11,6 +11,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 
 public class LoginActivity extends AppCompatActivity {
     private EditText emailEditText, passwordEditText;
@@ -24,9 +25,11 @@ public class LoginActivity extends AppCompatActivity {
         setContentView(R.layout.activity_login);
 
         mAuth = FirebaseAuth.getInstance();
+        mAuth.getFirebaseAuthSettings().setAppVerificationDisabledForTesting(true);
 
-        // Проверяем, не вошел ли уже пользователь
-        if (mAuth.getCurrentUser() != null) {
+        // Проверяем текущего пользователя
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser != null && currentUser.isEmailVerified()) {
             startActivity(new Intent(this, MainActivity.class));
             finish();
             return;
@@ -61,7 +64,6 @@ public class LoginActivity extends AppCompatActivity {
             Toast.makeText(this, "Введите email", Toast.LENGTH_SHORT).show();
             return;
         }
-
         if (password.isEmpty()) {
             Toast.makeText(this, "Введите пароль", Toast.LENGTH_SHORT).show();
             return;
@@ -76,28 +78,36 @@ public class LoginActivity extends AppCompatActivity {
                     loginButton.setEnabled(true);
 
                     if (task.isSuccessful()) {
-                        Toast.makeText(LoginActivity.this, "Вход выполнен!", Toast.LENGTH_SHORT).show();
-                        Intent intent = new Intent(LoginActivity.this, MainActivity.class);
-                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                        startActivity(intent);
-                        finish();
-                    } else {
-                        String errorMessage = "Ошибка входа";
-                        if (task.getException() != null) {
-                            String message = task.getException().getMessage();
-                            if (message != null) {
-                                if (message.contains("There is no user record")) {
-                                    errorMessage = "Пользователь не найден";
-                                } else if (message.contains("password is invalid")) {
-                                    errorMessage = "Неверный пароль";
-                                } else if (message.contains("network error")) {
-                                    errorMessage = "Ошибка сети. Проверьте подключение к интернету";
+                        FirebaseUser user = mAuth.getCurrentUser();
+                        if (user != null) {
+                            // Проверяем подтверждение почты
+                            user.reload().addOnCompleteListener(reloadTask -> {
+                                if (user.isEmailVerified()) {
+                                    UserManager.init(LoginActivity.this);
+                                    UserManager.loadUserFromFirebase(user, u -> {
+                                        Toast.makeText(LoginActivity.this, "Вход выполнен!", Toast.LENGTH_SHORT).show();
+                                        startActivity(new Intent(LoginActivity.this, MainActivity.class));
+                                        finishAffinity();
+                                    });
                                 } else {
-                                    errorMessage = message;
+                                    Toast.makeText(LoginActivity.this,
+                                            "Подтвердите почту перед входом! Письмо отправлено на " + user.getEmail(),
+                                            Toast.LENGTH_LONG).show();
+                                    mAuth.signOut();
+                                    startActivity(new Intent(LoginActivity.this, VerificationActivity.class));
                                 }
-                            }
+                            });
                         }
-                        Toast.makeText(LoginActivity.this, errorMessage, Toast.LENGTH_LONG).show();
+                    } else {
+                        String error = "Ошибка входа";
+                        if (task.getException() != null && task.getException().getMessage() != null) {
+                            String msg = task.getException().getMessage();
+                            if (msg.contains("no user record")) error = "Пользователь не найден";
+                            else if (msg.contains("password is invalid")) error = "Неверный пароль";
+                            else if (msg.contains("network error")) error = "Ошибка сети";
+                            else error = msg;
+                        }
+                        Toast.makeText(LoginActivity.this, error, Toast.LENGTH_LONG).show();
                     }
                 });
     }

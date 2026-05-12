@@ -9,9 +9,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Date;
 import java.util.List;
 
 public class ViewHistoryManager {
@@ -19,7 +16,7 @@ public class ViewHistoryManager {
     private static final String HISTORY_KEY = "view_history";
     private static SharedPreferences prefs;
     private static final String TAG = "ViewHistoryManager";
-    private static final int MAX_HISTORY_SIZE = 50; // Максимальное количество записей в истории
+    private static final int MAX_HISTORY_SIZE = 50;
 
     public static void init(Context context) {
         if (prefs == null) {
@@ -27,36 +24,25 @@ public class ViewHistoryManager {
         }
     }
 
-    // Добавляем автомобиль в историю просмотров
     public static void addToHistory(Car car) {
         if (car == null || car.getId() == null) return;
-
         List<Car> history = loadHistory();
-
-        // Удаляем старую запись если она уже есть
         history.removeIf(c -> c.getId().equals(car.getId()));
-
-        // Добавляем новую запись в начало
         history.add(0, car);
-
-        // Ограничиваем размер истории
         if (history.size() > MAX_HISTORY_SIZE) {
             history = history.subList(0, MAX_HISTORY_SIZE);
         }
-
         saveHistory(history);
-        Log.d(TAG, "Car added to view history: " + car.getBrand() + " " + car.getModel());
+        Log.d(TAG, "Car added to history: " + car.getFullName());
     }
 
-    // Получаем историю просмотров
     public static List<Car> getViewHistory() {
         return loadHistory();
     }
 
-    // Очищаем историю просмотров
     public static void clearHistory() {
         prefs.edit().remove(HISTORY_KEY).apply();
-        Log.d(TAG, "View history cleared");
+        Log.d(TAG, "History cleared");
     }
 
     private static void saveHistory(List<Car> history) {
@@ -73,18 +59,28 @@ public class ViewHistoryManager {
                 carJson.put("price", car.getPrice());
                 carJson.put("description", car.getDescription());
                 carJson.put("ownerId", car.getOwnerId());
-                carJson.put("viewedAt", System.currentTimeMillis()); // Время просмотра
+                carJson.put("viewedAt", System.currentTimeMillis());
 
-                // Сохраняем первое изображение
-                if (car.getImageUrl() != null) {
-                    carJson.put("imageUrl", car.getImageUrl());
+                // Сохраняем первое фото
+                String firstUrl = car.getImageUrl();
+                if (firstUrl != null && !firstUrl.isEmpty()) {
+                    carJson.put("imageUrl", firstUrl);
+                }
+
+                // Сохраняем все фото
+                if (car.getImageUrls() != null && !car.getImageUrls().isEmpty()) {
+                    JSONArray imagesArray = new JSONArray();
+                    for (String url : car.getImageUrls()) {
+                        if (url != null) imagesArray.put(url);
+                    }
+                    carJson.put("imageUrls", imagesArray);
                 }
 
                 historyArray.put(carJson);
             }
             prefs.edit().putString(HISTORY_KEY, historyArray.toString()).apply();
         } catch (JSONException e) {
-            Log.e(TAG, "Error saving view history", e);
+            Log.e(TAG, "Error saving history", e);
         }
     }
 
@@ -93,7 +89,6 @@ public class ViewHistoryManager {
         try {
             String historyJson = prefs.getString(HISTORY_KEY, "[]");
             JSONArray historyArray = new JSONArray(historyJson);
-
             for (int i = 0; i < historyArray.length(); i++) {
                 JSONObject carJson = historyArray.getJSONObject(i);
                 Car car = new Car();
@@ -107,17 +102,28 @@ public class ViewHistoryManager {
                 car.setDescription(carJson.optString("description"));
                 car.setOwnerId(carJson.optString("ownerId"));
 
-                // Восстанавливаем изображение
-                if (carJson.has("imageUrl")) {
-                    car.setImageUrl(carJson.getString("imageUrl"));
+                // Загружаем фото
+                String imageUrl = carJson.optString("imageUrl", "");
+                JSONArray imagesArray = carJson.optJSONArray("imageUrls");
+
+                if (imagesArray != null && imagesArray.length() > 0) {
+                    List<String> imageUrls = new ArrayList<>();
+                    for (int j = 0; j < imagesArray.length(); j++) {
+                        String url = imagesArray.optString(j, "");
+                        if (!url.isEmpty()) imageUrls.add(url);
+                    }
+                    car.setImageUrls(imageUrls);
+                } else if (!imageUrl.isEmpty()) {
+                    List<String> urls = new ArrayList<>();
+                    urls.add(imageUrl);
+                    car.setImageUrls(urls);
                 }
 
                 history.add(car);
             }
-        } catch (JSONException e) {
-            Log.e(TAG, "Error loading view history", e);
+        } catch (Exception e) {
+            Log.e(TAG, "Error loading history", e);
         }
-
         return history;
     }
 }

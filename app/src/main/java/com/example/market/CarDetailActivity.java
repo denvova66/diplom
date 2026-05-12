@@ -3,6 +3,7 @@ package com.example.market;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -18,11 +19,11 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 
-import java.io.File;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -30,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 
 public class CarDetailActivity extends AppCompatActivity {
+    private static final String TAG = "CarDetail";
     private RecyclerView carImagesRecyclerView;
     private TextView brandModelText, yearText, mileageText, engineText, priceText, descriptionText;
     private Car currentCar;
@@ -48,7 +50,6 @@ public class CarDetailActivity extends AppCompatActivity {
         ViewHistoryManager.init(this);
 
         currentCar = (Car) getIntent().getSerializableExtra("car");
-
         if (currentCar != null) {
             ViewHistoryManager.addToHistory(currentCar);
             loadSellerPhone();
@@ -81,368 +82,177 @@ public class CarDetailActivity extends AppCompatActivity {
         Button reviewsButton = findViewById(R.id.reviewsButton);
         Button reportButton = findViewById(R.id.reportButton);
 
-        if (editButton != null) {
-            editButton.setOnClickListener(v -> {
-                Intent intent = new Intent(CarDetailActivity.this, EditCarActivity.class);
-                intent.putExtra("car_id", currentCar.getId());
-                startActivity(intent);
-            });
-        }
-
-        if (chatButton != null) {
-            chatButton.setOnClickListener(v -> startChat());
-        }
-
-        if (contactButton != null) {
-            contactButton.setOnClickListener(v -> callSeller());
-        }
-
-        if (favoriteButton != null) {
-            favoriteButton.setOnClickListener(v -> {
-                toggleFavorite();
-                updateFavoriteButton(favoriteButton);
-            });
-        }
-
-        if (deleteButton != null) {
-            deleteButton.setOnClickListener(v -> deleteCar());
-        }
-
-        if (reviewsButton != null) {
-            reviewsButton.setOnClickListener(v -> {
-                Intent intent = new Intent(CarDetailActivity.this, ReviewsActivity.class);
-                intent.putExtra("targetUserId", currentCar.getOwnerId());
-                startActivity(intent);
-            });
-        }
-
-        if (reportButton != null) {
-            reportButton.setOnClickListener(v -> reportCar());
-        }
+        if (editButton != null) editButton.setOnClickListener(v -> {
+            startActivity(new Intent(this, EditCarActivity.class).putExtra("car_id", currentCar.getId()));
+        });
+        if (chatButton != null) chatButton.setOnClickListener(v -> startChat());
+        if (contactButton != null) contactButton.setOnClickListener(v -> callSeller());
+        if (favoriteButton != null) favoriteButton.setOnClickListener(v -> {
+            toggleFavorite();
+            updateFavoriteButton(favoriteButton);
+        });
+        if (deleteButton != null) deleteButton.setOnClickListener(v -> deleteCar());
+        if (reviewsButton != null) reviewsButton.setOnClickListener(v -> {
+            startActivity(new Intent(this, ReviewsActivity.class).putExtra("targetUserId", currentCar.getOwnerId()));
+        });
+        if (reportButton != null) reportButton.setOnClickListener(v -> reportCar());
     }
 
     private void loadSellerPhone() {
         String sellerId = currentCar.getOwnerId();
         if (sellerId == null || sellerId.isEmpty()) return;
-
-        db.collection("users").document(sellerId).get()
-                .addOnSuccessListener(doc -> {
-                    if (doc.exists()) {
-                        sellerPhone = doc.getString("phoneNumber");
-                        if (sellerPhone == null) sellerPhone = "";
-
-                        Button contactButton = findViewById(R.id.contactButton);
-                        if (contactButton != null && !sellerPhone.isEmpty()) {
-                            contactButton.setText("Позвонить: " + sellerPhone);
-                        }
-                    }
-                });
+        db.collection("users").document(sellerId).get().addOnSuccessListener(doc -> {
+            if (doc.exists()) {
+                sellerPhone = doc.getString("phoneNumber");
+                if (sellerPhone == null) sellerPhone = "";
+                Button cb = findViewById(R.id.contactButton);
+                if (cb != null && !sellerPhone.isEmpty()) cb.setText("Позвонить: " + sellerPhone);
+            }
+        });
     }
 
     private void displayCarDetails() {
-        if (currentCar != null) {
-            brandModelText.setText(currentCar.getFullName());
-            yearText.setText("Год: " + currentCar.getYear());
-            mileageText.setText("Пробег: " + currentCar.getMileage() + " км");
-            engineText.setText("Объем: " + currentCar.getEngineVolume() + " л");
-            priceText.setText(String.format("%,.0f ₽", currentCar.getPrice()));
-            descriptionText.setText(currentCar.getDescription() != null ?
-                    currentCar.getDescription() : "Описание отсутствует");
+        if (currentCar == null) return;
+        brandModelText.setText(currentCar.getFullName());
+        yearText.setText("Год: " + currentCar.getYear());
+        mileageText.setText("Пробег: " + currentCar.getMileage() + " км");
+        engineText.setText("Объем: " + currentCar.getEngineVolume() + " л");
+        priceText.setText(String.format("%,.0f ₽", currentCar.getPrice()));
+        descriptionText.setText(currentCar.getDescription() != null ? currentCar.getDescription() : "Описание отсутствует");
 
-            // Настройка изображений
-            CarImageAdapter adapter = new CarImageAdapter(currentCar.getImageUrls());
-            LinearLayoutManager layoutManager = new LinearLayoutManager(this,
-                    LinearLayoutManager.HORIZONTAL, false);
-            carImagesRecyclerView.setLayoutManager(layoutManager);
-            carImagesRecyclerView.setAdapter(adapter);
+        carImagesRecyclerView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+        carImagesRecyclerView.setAdapter(new CarImageAdapter(currentCar.getImageUrls()));
 
-            Button favoriteButton = findViewById(R.id.favoriteButton);
-            if (favoriteButton != null) updateFavoriteButton(favoriteButton);
+        Button fb = findViewById(R.id.favoriteButton);
+        if (fb != null) updateFavoriteButton(fb);
 
-            // Права на редактирование
-            FirebaseUser currentUser = mAuth.getCurrentUser();
-            Button editBtn = findViewById(R.id.editButton);
-            Button deleteBtn = findViewById(R.id.deleteButton);
-
-            boolean isOwner = currentUser != null && currentUser.getUid().equals(currentCar.getOwnerId());
-            boolean isAdmin = UserManager.isAdmin();
-
-            if (isOwner) {
-                if (editBtn != null) editBtn.setVisibility(View.VISIBLE);
-            } else {
-                if (editBtn != null) editBtn.setVisibility(View.GONE);
-            }
-
+        FirebaseUser cu = mAuth.getCurrentUser();
+        Button eb = findViewById(R.id.editButton), dbBtn = findViewById(R.id.deleteButton);
+        boolean isOwner = cu != null && cu.getUid().equals(currentCar.getOwnerId());
+        boolean isAdmin = UserManager.isAdmin();
+        if (eb != null) eb.setVisibility(isOwner ? View.VISIBLE : View.GONE);
+        if (dbBtn != null) {
             if (isOwner || isAdmin) {
-                if (deleteBtn != null) {
-                    deleteBtn.setVisibility(View.VISIBLE);
-                    deleteBtn.setText(isAdmin && !isOwner ? "Удалить (Админ)" : "Удалить");
-                }
+                dbBtn.setVisibility(View.VISIBLE);
+                dbBtn.setText(isAdmin && !isOwner ? "Удалить (Админ)" : "Удалить");
             } else {
-                if (deleteBtn != null) deleteBtn.setVisibility(View.GONE);
+                dbBtn.setVisibility(View.GONE);
             }
         }
     }
 
-    private void updateFavoriteButton(Button button) {
-        if (currentCar != null && button != null) {
-            button.setText(currentCar.isFavorite() ? "Удалить из избранного" : "Добавить в избранное");
-        }
+    private void updateFavoriteButton(Button b) {
+        if (currentCar != null && b != null) b.setText(currentCar.isFavorite() ? "Удалить из избранного" : "Добавить в избранное");
     }
 
     private void callSeller() {
-        if (sellerPhone != null && !sellerPhone.isEmpty()) {
-            Intent intent = new Intent(Intent.ACTION_DIAL);
-            intent.setData(Uri.parse("tel:" + sellerPhone));
-            startActivity(intent);
-        } else {
-            Toast.makeText(this, "Номер телефона продавца не указан", Toast.LENGTH_SHORT).show();
-        }
+        if (sellerPhone != null && !sellerPhone.isEmpty()) startActivity(new Intent(Intent.ACTION_DIAL).setData(Uri.parse("tel:" + sellerPhone)));
+        else Toast.makeText(this, "Номер не указан", Toast.LENGTH_SHORT).show();
     }
 
     private void toggleFavorite() {
         if (currentCar == null) return;
-
-        if (currentCar.isFavorite()) {
-            Favorites.removeFavoriteCar(currentCar);
-            currentCar.setFavorite(false);
-            Toast.makeText(this, "Удалено из избранного", Toast.LENGTH_SHORT).show();
-        } else {
-            Favorites.addFavoriteCar(currentCar);
-            currentCar.setFavorite(true);
-            Toast.makeText(this, "Добавлено в избранное", Toast.LENGTH_SHORT).show();
-        }
+        if (currentCar.isFavorite()) { Favorites.removeFavoriteCar(currentCar); currentCar.setFavorite(false); }
+        else { Favorites.addFavoriteCar(currentCar); currentCar.setFavorite(true); }
+        Toast.makeText(this, currentCar.isFavorite() ? "Добавлено" : "Удалено", Toast.LENGTH_SHORT).show();
     }
 
     private void deleteCar() {
-        FirebaseUser currentUser = mAuth.getCurrentUser();
-        boolean isOwner = currentUser != null && currentUser.getUid().equals(currentCar.getOwnerId());
-        boolean isAdmin = UserManager.isAdmin();
-
-        if (!isOwner && !isAdmin) {
-            Toast.makeText(this, "У вас нет прав на удаление", Toast.LENGTH_SHORT).show();
-            return;
+        FirebaseUser cu = mAuth.getCurrentUser();
+        if (cu == null || (!cu.getUid().equals(currentCar.getOwnerId()) && !UserManager.isAdmin())) {
+            Toast.makeText(this, "Нет прав", Toast.LENGTH_SHORT).show(); return;
         }
-
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Удаление")
-                .setMessage("Вы уверены, что хотите удалить это объявление?")
-                .setPositiveButton("Удалить", (dialog, which) -> {
-                    String carId = currentCar.getId();
-
-                    // Удаляем локальные фото
-                    if (currentCar.getImageUrls() != null) {
-                        for (String path : currentCar.getImageUrls()) {
-                            if (path != null && !path.isEmpty()) {
-                                File file = new File(path);
-                                if (file.exists()) file.delete();
-                            }
-                        }
-                    }
-
-                    // Удаляем из избранного
-                    db.collection("favorites").whereEqualTo("carId", carId).get()
-                            .addOnSuccessListener(favs -> {
-                                for (var doc : favs) doc.getReference().delete();
-                            });
-
-                    // Удаляем из Firebase
-                    if (!currentCar.isLocal()) {
-                        db.collection("cars").document(carId).delete()
-                                .addOnSuccessListener(aVoid -> {
-                                    Toast.makeText(this, "Объявление удалено", Toast.LENGTH_SHORT).show();
-                                    finish();
-                                })
-                                .addOnFailureListener(e -> {
-                                    Toast.makeText(this, "Ошибка при удалении", Toast.LENGTH_SHORT).show();
-                                });
-                    } else {
-                        LocalCarManager.removeCar(carId);
-                        Toast.makeText(this, "Объявление удалено", Toast.LENGTH_SHORT).show();
-                        finish();
-                    }
-                })
-                .setNegativeButton("Отмена", null)
-                .show();
+        new androidx.appcompat.app.AlertDialog.Builder(this).setTitle("Удаление").setMessage("Удалить объявление?")
+                .setPositiveButton("Удалить", (d, w) -> {
+                    db.collection("cars").document(currentCar.getId()).delete();
+                    LocalCarManager.removeCar(currentCar.getId());
+                    Toast.makeText(this, "Удалено", Toast.LENGTH_SHORT).show(); finish();
+                }).setNegativeButton("Отмена", null).show();
     }
 
     private void reportCar() {
         if (currentCar == null) return;
-
-        String currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-        if (currentCar.getOwnerId().equals(currentUserId)) {
-            Toast.makeText(this, "Нельзя пожаловаться на своё объявление", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
         String[] reasons = {"Мошенничество", "Спам", "Неверная цена", "Фейковое объявление", "Другое"};
-
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Пожаловаться на объявление")
-                .setItems(reasons, (dialog, which) -> {
-                    Map<String, Object> report = new HashMap<>();
-                    report.put("reporterId", currentUserId);
-                    report.put("targetType", "car");
-                    report.put("targetId", currentCar.getId());
-                    report.put("reason", reasons[which]);
-                    report.put("status", "pending");
-                    report.put("createdAt", new Date());
-
-                    db.collection("reports").add(report)
-                            .addOnSuccessListener(doc -> {
-                                Toast.makeText(this, "Жалоба отправлена", Toast.LENGTH_SHORT).show();
-                            });
-                })
-                .setNegativeButton("Отмена", null)
-                .show();
+        new androidx.appcompat.app.AlertDialog.Builder(this).setTitle("Пожаловаться").setItems(reasons, (d, w) -> {
+            Map<String, Object> r = new HashMap<>();
+            r.put("reporterId", FirebaseAuth.getInstance().getCurrentUser().getUid());
+            r.put("targetType", "car"); r.put("targetId", currentCar.getId());
+            r.put("reason", reasons[w]); r.put("status", "pending"); r.put("createdAt", new Date());
+            db.collection("reports").add(r);
+            Toast.makeText(this, "Жалоба отправлена", Toast.LENGTH_SHORT).show();
+        }).setNegativeButton("Отмена", null).show();
     }
 
     private void startChat() {
         if (currentCar == null) return;
-
-        String currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-        String sellerId = currentCar.getOwnerId();
-
-        if (sellerId == null || sellerId.isEmpty()) {
-            Toast.makeText(this, "Невозможно связаться с продавцом", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        if (sellerId.equals(currentUserId)) {
-            Toast.makeText(this, "Это ваше объявление", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        db.collection("chats")
-                .whereArrayContains("participants", currentUserId)
-                .get()
-                .addOnSuccessListener(querySnapshot -> {
-                    String existingChatId = null;
-
-                    for (var doc : querySnapshot) {
-                        @SuppressWarnings("unchecked")
-                        List<String> participants = (List<String>) doc.get("participants");
-                        if (participants != null && participants.contains(sellerId)) {
-                            existingChatId = doc.getId();
-                            break;
-                        }
-                    }
-
-                    if (existingChatId != null) {
-                        openChat(existingChatId);
-                    } else {
-                        createNewChat(currentUserId, sellerId);
-                    }
-                });
+        String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        String sid = currentCar.getOwnerId();
+        if (sid == null || sid.isEmpty() || sid.equals(uid)) { Toast.makeText(this, "Невозможно", Toast.LENGTH_SHORT).show(); return; }
+        db.collection("chats").whereArrayContains("participants", uid).get().addOnSuccessListener(snap -> {
+            String cid = null;
+            for (var doc : snap) {
+                @SuppressWarnings("unchecked") List<String> p = (List<String>) doc.get("participants");
+                if (p != null && p.contains(sid)) { cid = doc.getId(); break; }
+            }
+            if (cid != null) openChat(cid);
+            else {
+                Map<String, Object> chat = new HashMap<>();
+                chat.put("participants", java.util.Arrays.asList(uid, sid));
+                chat.put("carId", currentCar.getId()); chat.put("lastMessage", ""); chat.put("lastMessageTime", new Date());
+                db.collection("chats").add(chat).addOnSuccessListener(d -> openChat(d.getId()));
+            }
+        });
     }
 
-    private void createNewChat(String userId1, String userId2) {
-        Map<String, Object> chatData = new HashMap<>();
-        chatData.put("participants", java.util.Arrays.asList(userId1, userId2));
-        chatData.put("carId", currentCar.getId());
-        chatData.put("lastMessage", "");
-        chatData.put("lastMessageTime", new Date());
-
-        db.collection("chats").add(chatData)
-                .addOnSuccessListener(doc -> openChat(doc.getId()));
+    private void openChat(String cid) {
+        startActivity(new Intent(this, ChatActivity.class)
+                .putExtra("chatId", cid).putExtra("userName", currentCar.getFullName()).putExtra("userPhone", sellerPhone));
     }
 
-    private void openChat(String chatId) {
-        Intent intent = new Intent(CarDetailActivity.this, ChatActivity.class);
-        intent.putExtra("chatId", chatId);
-        intent.putExtra("userName", currentCar.getFullName());
-        intent.putExtra("userPhone", sellerPhone);
-        startActivity(intent);
-    }
+    private class CarImageAdapter extends RecyclerView.Adapter<CarImageAdapter.ViewHolder> {
+        private List<String> urls;
+        CarImageAdapter(List<String> urls) { this.urls = urls != null ? urls : Collections.emptyList(); }
 
-    // ==================== АДАПТЕР ИЗОБРАЖЕНИЙ ====================
-    private class CarImageAdapter extends RecyclerView.Adapter<CarImageAdapter.ImageViewHolder> {
-        private List<String> imageUrls;
-
-        CarImageAdapter(List<String> imageUrls) {
-            this.imageUrls = imageUrls != null ? imageUrls : Collections.emptyList();
-        }
-
-        @NonNull
-        @Override
-        public ImageViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View view = LayoutInflater.from(parent.getContext())
-                    .inflate(R.layout.item_car_image, parent, false);
-            return new ImageViewHolder(view);
+        @NonNull @Override
+        public ViewHolder onCreateViewHolder(@NonNull ViewGroup p, int t) {
+            return new ViewHolder(LayoutInflater.from(p.getContext()).inflate(R.layout.item_car_image, p, false));
         }
 
         @Override
-        public void onBindViewHolder(@NonNull ImageViewHolder holder, int position) {
-            String path = imageUrls.get(position);
+        public void onBindViewHolder(@NonNull ViewHolder h, int pos) {
+            String url = urls.get(pos);
+            Log.d(TAG, "Detail image [" + pos + "]: " + url);
+            h.imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
 
-            ViewGroup.LayoutParams params = holder.imageView.getLayoutParams();
-            params.height = 280;
-            holder.imageView.setLayoutParams(params);
-            holder.imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
-
-            if (path != null && !path.isEmpty() && !path.equals("placeholder")) {
-                // Локальный файл
-                File imageFile = new File(path);
-                if (imageFile.exists()) {
-                    Glide.with(CarDetailActivity.this)
-                            .load(imageFile)
-                            .placeholder(R.drawable.ic_car_placeholder)
-                            .error(R.drawable.ic_car_placeholder)
-                            .centerCrop()
-                            .into(holder.imageView);
-                }
-                // Старые URL из Firebase Storage (на всякий случай)
-                else if (path.startsWith("https://firebasestorage.googleapis.com")) {
-                    Glide.with(CarDetailActivity.this)
-                            .load(path)
-                            .placeholder(R.drawable.ic_car_placeholder)
-                            .error(R.drawable.ic_car_placeholder)
-                            .centerCrop()
-                            .into(holder.imageView);
-                }
-                // Другие URL
-                else if (path.startsWith("http")) {
-                    Glide.with(CarDetailActivity.this)
-                            .load(path)
-                            .placeholder(R.drawable.ic_car_placeholder)
-                            .centerCrop()
-                            .into(holder.imageView);
-                }
-                // Локальный ресурс
-                else if (path.startsWith("local://")) {
-                    String imageName = path.replace("local://", "");
-                    int resourceId = getResources().getIdentifier(imageName, "drawable", getPackageName());
-                    holder.imageView.setImageResource(resourceId != 0 ? resourceId : R.drawable.ic_car_placeholder);
-                }
-                else {
-                    holder.imageView.setImageResource(R.drawable.ic_car_placeholder);
-                }
+            if (url != null && !url.isEmpty() && !url.equals("placeholder")
+                    && (url.startsWith("https://") || url.startsWith("http://"))) {
+                Glide.with(CarDetailActivity.this)
+                        .load(url)
+                        .placeholder(R.drawable.ic_car_placeholder)
+                        .error(R.drawable.ic_car_placeholder)
+                        .diskCacheStrategy(DiskCacheStrategy.ALL)
+                        .fitCenter()
+                        .into(h.imageView);
             } else {
-                holder.imageView.setImageResource(R.drawable.ic_car_placeholder);
+                Log.w(TAG, "Invalid URL: " + url);
+                h.imageView.setImageResource(R.drawable.ic_car_placeholder);
             }
         }
 
-        @Override
-        public int getItemCount() {
-            return imageUrls.size();
-        }
+        @Override public int getItemCount() { return urls.size(); }
 
-        class ImageViewHolder extends RecyclerView.ViewHolder {
+        class ViewHolder extends RecyclerView.ViewHolder {
             ImageView imageView;
-            ImageViewHolder(View itemView) {
-                super(itemView);
-                imageView = itemView.findViewById(R.id.carImage);
-            }
+            ViewHolder(View v) { super(v); imageView = v.findViewById(R.id.carImage); }
         }
     }
 
-    @Override
-    protected void onResume() {
+    @Override protected void onResume() {
         super.onResume();
         if (currentCar != null) {
             currentCar.setFavorite(Favorites.isFavorite(currentCar));
-            Button favoriteButton = findViewById(R.id.favoriteButton);
-            if (favoriteButton != null) updateFavoriteButton(favoriteButton);
+            Button fb = findViewById(R.id.favoriteButton);
+            if (fb != null) updateFavoriteButton(fb);
         }
     }
 }

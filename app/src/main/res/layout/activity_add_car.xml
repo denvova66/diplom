@@ -37,7 +37,6 @@
                 android:textStyle="bold"
                 android:layout_marginBottom="12dp" />
 
-            <!-- Контейнер для фото -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/imagesRecyclerView"
                 android:layout_width="match_parent"
@@ -78,53 +77,103 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <EditText
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Марка"
+                        android:textSize="12sp"
+                        android:textColor="#999999"
+                        android:layout_marginBottom="4dp" />
+
+                    <AutoCompleteTextView
                         android:id="@+id/brandEditText"
                         android:layout_width="match_parent"
                         android:layout_height="48dp"
                         android:background="@drawable/edit_text_bg"
-                        android:hint="Марка (например: BMW)"
+                        android:hint="Начните вводить марку (BMW, Audi...)"
                         android:textSize="16sp"
                         android:paddingHorizontal="12dp"
-                        android:layout_marginBottom="12dp" />
+                        android:layout_marginBottom="12dp"
+                        android:completionThreshold="1"
+                        android:dropDownHeight="200dp" />
 
-                    <EditText
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Модель"
+                        android:textSize="12sp"
+                        android:textColor="#999999"
+                        android:layout_marginBottom="4dp" />
+
+                    <AutoCompleteTextView
                         android:id="@+id/modelEditText"
                         android:layout_width="match_parent"
                         android:layout_height="48dp"
                         android:background="@drawable/edit_text_bg"
-                        android:hint="Модель (например: X5)"
+                        android:hint="Начните вводить модель (X5, M3...)"
                         android:textSize="16sp"
                         android:paddingHorizontal="12dp"
-                        android:layout_marginBottom="12dp" />
+                        android:layout_marginBottom="12dp"
+                        android:completionThreshold="1"
+                        android:dropDownHeight="200dp" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal">
 
-                        <EditText
-                            android:id="@+id/yearEditText"
+                        <LinearLayout
                             android:layout_width="0dp"
-                            android:layout_height="48dp"
+                            android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:background="@drawable/edit_text_bg"
-                            android:hint="Год"
-                            android:textSize="16sp"
-                            android:inputType="number"
-                            android:paddingHorizontal="12dp"
-                            android:layout_marginEnd="8dp" />
+                            android:orientation="vertical"
+                            android:layout_marginEnd="8dp">
 
-                        <EditText
-                            android:id="@+id/priceEditText"
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Год выпуска"
+                                android:textSize="12sp"
+                                android:textColor="#999999"
+                                android:layout_marginBottom="4dp" />
+
+                            <EditText
+                                android:id="@+id/yearEditText"
+                                android:layout_width="match_parent"
+                                android:layout_height="48dp"
+                                android:background="@drawable/edit_text_bg"
+                                android:hint="2024"
+                                android:textSize="16sp"
+                                android:inputType="number"
+                                android:maxLength="4"
+                                android:paddingHorizontal="12dp" />
+                        </LinearLayout>
+
+                        <LinearLayout
                             android:layout_width="0dp"
-                            android:layout_height="48dp"
+                            android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:background="@drawable/edit_text_bg"
-                            android:hint="Цена, ₽"
-                            android:textSize="16sp"
-                            android:inputType="number"
-                            android:paddingHorizontal="12dp" />
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Цена, ₽"
+                                android:textSize="12sp"
+                                android:textColor="#999999"
+                                android:layout_marginBottom="4dp" />
+
+                            <EditText
+                                android:id="@+id/priceEditText"
+                                android:layout_width="match_parent"
+                                android:layout_height="48dp"
+                                android:background="@drawable/edit_text_bg"
+                                android:hint="2 500 000"
+                                android:textSize="16sp"
+                                android:inputType="number"
+                                android:maxLength="10"
+                                android:paddingHorizontal="12dp" />
+                        </LinearLayout>
                     </LinearLayout>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
@@ -157,28 +206,58 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal">
 
-                        <EditText
-                            android:id="@+id/mileageEditText"
+                        <LinearLayout
                             android:layout_width="0dp"
-                            android:layout_height="48dp"
+                            android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:background="@drawable/edit_text_bg"
-                            android:hint="Пробег, км"
-                            android:textSize="16sp"
-                            android:inputType="number"
-                            android:paddingHorizontal="12dp"
-                            android:layout_marginEnd="8dp" />
+                            android:orientation="vertical"
+                            android:layout_marginEnd="8dp">
 
-                        <EditText
-                            android:id="@+id/engineEditText"
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Пробег, км"
+                                android:textSize="12sp"
+                                android:textColor="#999999"
+                                android:layout_marginBottom="4dp" />
+
+                            <EditText
+                                android:id="@+id/mileageEditText"
+                                android:layout_width="match_parent"
+                                android:layout_height="48dp"
+                                android:background="@drawable/edit_text_bg"
+                                android:hint="45 000"
+                                android:textSize="16sp"
+                                android:inputType="number"
+                                android:maxLength="7"
+                                android:paddingHorizontal="12dp" />
+                        </LinearLayout>
+
+                        <LinearLayout
                             android:layout_width="0dp"
-                            android:layout_height="48dp"
+                            android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:background="@drawable/edit_text_bg"
-                            android:hint="Объем, л"
-                            android:textSize="16sp"
-                            android:inputType="numberDecimal"
-                            android:paddingHorizontal="12dp" />
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Объем двигателя, л"
+                                android:textSize="12sp"
+                                android:textColor="#999999"
+                                android:layout_marginBottom="4dp" />
+
+                            <EditText
+                                android:id="@+id/engineEditText"
+                                android:layout_width="match_parent"
+                                android:layout_height="48dp"
+                                android:background="@drawable/edit_text_bg"
+                                android:hint="3.0"
+                                android:textSize="16sp"
+                                android:inputType="numberDecimal"
+                                android:maxLength="4"
+                                android:paddingHorizontal="12dp" />
+                        </LinearLayout>
                     </LinearLayout>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
@@ -221,8 +300,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/white"
-        android:padding="16dp"
-        app:elevation="8dp">
+        android:padding="16dp">
 
         <Button
             android:id="@+id/submitButton"
