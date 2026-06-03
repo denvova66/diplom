@@ -137,7 +137,7 @@ public class Favorites {
             if (prefs != null) prefs.edit().remove(FAVORITES_KEY).apply();
         }
     }
-
+    /// /345234234
     public static void syncWithLoadedCars(List<Car> loadedCars) {
         if (loadedCars == null) return;
         for (Car loadedCar : loadedCars) {
