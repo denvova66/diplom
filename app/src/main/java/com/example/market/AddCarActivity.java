@@ -250,6 +250,7 @@ public class AddCarActivity extends AppCompatActivity {
                     car.setPrice(Double.parseDouble(priceEditText.getText().toString().trim()));
                     car.setImageUrls(validUrls);
                     car.setOwnerId(user.getUid());
+                    car.setStatus("active");
                     car.setLocal(false);
                     LocalCarManager.addCar(car);
 

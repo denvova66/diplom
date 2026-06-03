@@ -237,6 +237,17 @@ public class EditCarActivity extends AppCompatActivity {
                     progressBar.setVisibility(View.GONE);
                     submitButton.setEnabled(true);
                     Toast.makeText(this, "Изменения сохранены", Toast.LENGTH_SHORT).show();
+
+                    // Обновляем локальный список если нужно
+                    Car car = new Car();
+                    car.setId(carId);
+                    car.setBrand(brandEditText.getText().toString().trim());
+                    car.setModel(modelEditText.getText().toString().trim());
+                    car.setYear(Integer.parseInt(yearEditText.getText().toString().trim()));
+                    car.setPrice(Double.parseDouble(priceEditText.getText().toString().trim()));
+                    car.setImageUrls(uploadedUrls.isEmpty() ? existingUrls : uploadedUrls);
+                    LocalCarManager.updateCar(car);
+
                     finish();
                 })
                 .addOnFailureListener(e -> {
