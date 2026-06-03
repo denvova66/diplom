@@ -63,7 +63,7 @@ public class ProfileActivity extends AppCompatActivity {
         View myAdsButton = findViewById(R.id.myAdsButton);
         if (myAdsButton != null) {
             myAdsButton.setOnClickListener(v -> {
-                Toast.makeText(this, "Мои объявления", Toast.LENGTH_SHORT).show();
+                startActivity(new Intent(ProfileActivity.this, MyAdsActivity.class));
             });
         }
 

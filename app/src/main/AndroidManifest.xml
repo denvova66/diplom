@@ -31,6 +31,7 @@
         <activity android:name=".MainActivity" android:exported="false" android:screenOrientation="portrait" android:theme="@style/Theme.Market.NoActionBar" />
         <activity android:name=".RegisterActivity" android:exported="false" android:screenOrientation="portrait" android:theme="@style/Theme.Market.NoActionBar" />
         <activity android:name=".ProfileActivity" android:exported="false" android:screenOrientation="portrait" android:theme="@style/Theme.Market.NoActionBar" />
+        <activity android:name=".MyAdsActivity" android:exported="false" android:screenOrientation="portrait" android:theme="@style/Theme.Market.NoActionBar" />
         <activity android:name=".CarDetailActivity" android:exported="false" android:screenOrientation="portrait" android:theme="@style/Theme.Market.NoActionBar" />
         <activity android:name=".AddCarActivity" android:exported="false" android:screenOrientation="portrait" android:theme="@style/Theme.Market.NoActionBar" />
         <activity android:name=".EditCarActivity" android:exported="false" android:screenOrientation="portrait" android:theme="@style/Theme.Market.NoActionBar" />

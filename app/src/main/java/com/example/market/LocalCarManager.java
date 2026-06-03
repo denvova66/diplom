@@ -103,6 +103,17 @@ public class LocalCarManager {
         saveCars(cars);
     }
 
+    public static void updateCar(Car updatedCar) {
+        List<Car> cars = loadCars();
+        for (int i = 0; i < cars.size(); i++) {
+            if (cars.get(i).getId().equals(updatedCar.getId())) {
+                cars.set(i, updatedCar);
+                break;
+            }
+        }
+        saveCars(cars);
+    }
+
     public static void removeCar(String carId) {
         List<Car> cars = loadCars();
         for (int i = 0; i < cars.size(); i++) {

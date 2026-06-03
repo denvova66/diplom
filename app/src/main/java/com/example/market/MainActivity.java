@@ -442,6 +442,10 @@ public class MainActivity extends AppCompatActivity {
         String searchText = searchEditText != null ? searchEditText.getText().toString().trim().toLowerCase() : "";
         for (Car car : allCars) {
             if (car == null) continue;
+
+            // Фильтруем скрытые объявления
+            if ("hidden".equals(car.getStatus())) continue;
+
             boolean matches = searchText.isEmpty() || car.getFullName().toLowerCase().contains(searchText) || String.valueOf((int)car.getPrice()).contains(searchText);
             if (selectedBrand != null && !car.getBrand().equalsIgnoreCase(selectedBrand)) matches = false;
             if (selectedModel != null && !car.getModel().equalsIgnoreCase(selectedModel)) matches = false;
@@ -534,6 +538,7 @@ public class MainActivity extends AppCompatActivity {
             else { Long pl = doc.getLong("price"); if (pl != null) car.setPrice(pl.doubleValue()); }
             car.setDescription(doc.getString("description"));
             car.setOwnerId(doc.getString("ownerId"));
+            car.setStatus(doc.getString("status"));
             List<String> imgs = (List<String>) doc.get("imageUrls");
             if (imgs != null) car.setImageUrls(new ArrayList<>(imgs));
             Date d = doc.getDate("createdAt"); if (d != null) car.setCreatedAt(d);
@@ -584,7 +589,7 @@ public class MainActivity extends AppCompatActivity {
         class ViewHolder extends RecyclerView.ViewHolder { TextView text; ViewHolder(View v) { super(v); text = v.findViewById(R.id.brandNameText); } }
     }
 
-    class SimpleListAdapter extends RecyclerView.Adapter<SimpleListAdapter.VH> {
+    public static class SimpleListAdapter extends RecyclerView.Adapter<SimpleListAdapter.VH> {
         private List<String> items; private OnItemClick listener;
         interface OnItemClick { void onClick(String item); }
         SimpleListAdapter(List<String> items, OnItemClick listener) { this.items = items; this.listener = listener; }
