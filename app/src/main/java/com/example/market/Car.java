@@ -15,6 +15,7 @@ public class Car implements Serializable {
     private double price;
     private String description;
     private String ownerId;
+    private String status;
     private List<String> imageUrls;
     private List<String> imagePaths;
     private Date createdAt;
@@ -31,6 +32,7 @@ public class Car implements Serializable {
         this.isLocal = false;
         this.description = "";
         this.ownerId = "";
+        this.status = "active";
     }
 
     public String getId() { return id != null ? id : ""; }
@@ -59,6 +61,9 @@ public class Car implements Serializable {
 
     public String getOwnerId() { return ownerId != null ? ownerId : ""; }
     public void setOwnerId(String ownerId) { this.ownerId = ownerId; }
+
+    public String getStatus() { return status != null ? status : "active"; }
+    public void setStatus(String status) { this.status = status; }
 
     public List<String> getImageUrls() {
         if (imageUrls == null) imageUrls = new ArrayList<>();
